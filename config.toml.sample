@@ -1,0 +1,10 @@
+[to]
+token = "xoxp-**"
+
+[from]
+
+[from.team1]
+token = "xoxp-**"
+
+[from.team2]
+token = "xoxp-**"
