@@ -14,6 +14,7 @@ import (
 
 const (
 	PrefixSlackChannel = "aggr-"
+	PostUserName       = "slack-aggregator"
 )
 
 type Config struct {
@@ -168,6 +169,7 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	}
 	attachment.Fields = []slack.AttachmentField{channelField, userField}
 	param.Attachments = []slack.Attachment{attachment}
+	param.Username = PostUserName
 	_, _, err = toAPI.PostMessage(postChannelName, "", param)
 	if err != nil {
 		log.Println("[ERROR] postMessageToChannel is fail")
