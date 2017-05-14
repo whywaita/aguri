@@ -111,6 +111,12 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 
 	fromChannelInfo, _ := fromAPI.GetChannelInfo(ev.Channel)
 	fromUserInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
+	if fromChannelInfo.Name == "" || fromUserInfo.Name == "" {
+		// ignore
+		// not user : bot
+		// not channel: group
+		return nil
+	}
 	param := slack.PostMessageParameters{}
 	channelField := slack.AttachmentField{
 		Title: "channel",
