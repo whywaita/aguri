@@ -99,11 +99,11 @@ func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.In
 	if ev.Msg.BotID != "" {
 		// this is bot
 		byInfo, _ := fromAPI.GetBotInfo(ev.Msg.BotID)
-		by = "Bot :" + byInfo.Name
+		by = "Bot : " + byInfo.Name
 	} else {
 		byInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
 		if byInfo != nil {
-			by = "User :" + byInfo.Name
+			by = "User : " + byInfo.Name
 		} else {
 			by = ""
 		}
@@ -116,13 +116,13 @@ func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.In
 	for _, c := range ev.Channel {
 		if string(c) == "C" {
 			poInfo, _ := fromAPI.GetChannelInfo(ev.Channel)
-			position = "Channel :" + poInfo.Name
+			position = "Channel : " + poInfo.Name
 		} else if string(c) == "G" {
 			poInfo, _ := fromAPI.GetGroupInfo(ev.Channel)
-			position = "Group :" + poInfo.Name
+			position = "Group : " + poInfo.Name
 		} else if string(c) == "D" {
 			poInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
-			position = "DM :" + poInfo.Name
+			position = "DM : " + poInfo.Name
 		} else {
 			position = " "
 		}
