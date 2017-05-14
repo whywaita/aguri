@@ -162,12 +162,14 @@ func main() {
 	}
 
 	toAPI := slack.New(toToken)
-	// fromAPI := slack.New(froms[0].Token)
 
 	for _, from := range froms {
 		wg.Add(1)
+		// pass goroutine miss ref: http://qiita.com/sudix/items/67d4cad08fe88dcb9a6d
+		fromToken := from.Token
+		fromTeam := from.Team
 		go func() {
-			fromAPI := slack.New(from.Token)
+			fromAPI := slack.New(fromToken)
 			rtm := fromAPI.NewRTM()
 			go rtm.ManageConnection()
 			for msg := range rtm.IncomingEvents {
@@ -176,7 +178,8 @@ func main() {
 					// Ignore Hello
 				case *slack.MessageEvent:
 					fmt.Printf("Message: %v\n", ev)
-					err = postMessageToChannel(toAPI, fromAPI, ev, PrefixSlackChannel+from.Team)
+					fmt.Println(fromTeam)
+					err = postMessageToChannel(toAPI, fromAPI, ev, PrefixSlackChannel+fromTeam)
 					if err != nil {
 						log.Println(err)
 					}
