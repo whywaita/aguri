@@ -91,7 +91,8 @@ func makeNewChannel(api *slack.Client, name string) error {
 }
 
 func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.Info) (string, string) {
-	var by, position string
+	by := ""
+	position := ""
 
 	// user or bot
 	if ev.Msg.BotID != "" {
@@ -100,7 +101,11 @@ func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.In
 		by = "Bot :" + byInfo.Name
 	} else {
 		byInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
-		by = "User :" + byInfo.Name
+		if byInfo != nil {
+			by = "User :" + byInfo.Name
+		} else {
+			by = ""
+		}
 	}
 
 	// public channel or private channel or group
@@ -117,6 +122,8 @@ func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.In
 		} else if string(c) == "D" {
 			poInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
 			position = "DM :" + poInfo.Name
+		} else {
+			position = " "
 		}
 
 		break
