@@ -100,12 +100,15 @@ func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.In
 		// this is bot
 		byInfo, _ := fromAPI.GetBotInfo(ev.Msg.BotID)
 		by = "Bot : " + byInfo.Name
+	} else if ev.Msg.SubType != "" {
+		// SubType is not define user
+		by = "Status : " + ev.Msg.SubType
 	} else {
+		// user
 		byInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
-		if byInfo != nil {
-			by = "User : " + byInfo.Name
-		} else {
-			by = ""
+		by = "User : " + byInfo.Name
+		if ev.Msg.SubType != "" {
+			by += "\n" + "Status : " + ev.Msg.SubType
 		}
 	}
 
@@ -121,12 +124,17 @@ func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.In
 			poInfo, _ := fromAPI.GetGroupInfo(ev.Channel)
 			position = "Group : " + poInfo.Name
 		} else if string(c) == "D" {
-			poInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
-			position = "DM : " + poInfo.Name
+			if ev.Msg.SubType != "" {
+				// SubType is not define user
+			} else {
+				poInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
+				position = "DM : " + poInfo.Name
+			}
 		} else {
 			position = " "
 		}
 
+		// check only first charactor
 		break
 	}
 
