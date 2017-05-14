@@ -90,14 +90,14 @@ func makeNewChannel(api *slack.Client, name string) error {
 	return nil
 }
 
-func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, postChannelName string) error {
+func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, postChannelName string) (string, error) {
 	// post aggregate message
 	var err error
 
 	isExist, err := checkExistChannel(toAPI, postChannelName)
 	if err != nil {
 		log.Println("[ERROR] postMessageToChannel is fail")
-		return err
+		return "", err
 	}
 
 	if (isExist == false) && (err == nil) {
@@ -105,7 +105,7 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 		err = makeNewChannel(toAPI, postChannelName)
 		if err != nil {
 			log.Println("[ERROR] postMessageToChannel is fail")
-			return err
+			return "", err
 		}
 	}
 
@@ -115,36 +115,37 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 		// ignore
 		// not user : bot
 		// not channel: group
-		return nil
+		return "", nil
 	}
 	param := slack.PostMessageParameters{}
 	channelField := slack.AttachmentField{
 		Title: "channel",
 		Value: fromChannelInfo.Name,
-		Short: false,
+		Short: true,
 	}
 	userField := slack.AttachmentField{
 		Title: "User",
 		Value: fromUserInfo.Name,
-		Short: false,
+		Short: true,
 	}
 	attachment := slack.Attachment{
-		Text: ev.Text,
+		Pretext: ev.Text,
 	}
 	attachment.Fields = []slack.AttachmentField{channelField, userField}
 	param.Attachments = []slack.Attachment{attachment}
 	_, _, err = toAPI.PostMessage(postChannelName, "", param)
 	if err != nil {
 		log.Println("[ERROR] postMessageToChannel is fail")
-		return err
+		return "", err
 	}
 
-	return nil
+	return ev.Timestamp, nil
 }
 
 func main() {
 	var err error
 	var wg sync.WaitGroup
+	var lastTimestamp string
 
 	// parse args
 	var configPath = flag.String("config", "config.toml", "config file path")
@@ -178,10 +179,11 @@ func main() {
 					// Ignore Hello
 				case *slack.MessageEvent:
 					fmt.Printf("Message: %v\n", ev)
-					fmt.Println(fromTeam)
-					err = postMessageToChannel(toAPI, fromAPI, ev, PrefixSlackChannel+fromTeam)
-					if err != nil {
-						log.Println(err)
+					if lastTimestamp != ev.Timestamp {
+						lastTimestamp, err = postMessageToChannel(toAPI, fromAPI, ev, PrefixSlackChannel+fromTeam)
+						if err != nil {
+							log.Println(err)
+						}
 					}
 
 				case *slack.RTMError:
