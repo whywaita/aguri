@@ -90,7 +90,42 @@ func makeNewChannel(api *slack.Client, name string) error {
 	return nil
 }
 
-func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, postChannelName string) (string, error) {
+func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.Info) (string, string) {
+	var by, position string
+
+	// user or bot
+	if ev.Msg.BotID != "" {
+		// this is bot
+		byInfo, _ := fromAPI.GetBotInfo(ev.Msg.BotID)
+		by = "Bot :" + byInfo.Name
+	} else {
+		byInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
+		by = "User :" + byInfo.Name
+	}
+
+	// public channel or private channel or group
+	// Public channel prefix : C
+	// Private channel prefix : G
+	// Direct message prefix : D
+	for _, c := range ev.Channel {
+		if string(c) == "C" {
+			poInfo, _ := fromAPI.GetChannelInfo(ev.Channel)
+			position = "Channel :" + poInfo.Name
+		} else if string(c) == "G" {
+			poInfo, _ := fromAPI.GetGroupInfo(ev.Channel)
+			position = "Group :" + poInfo.Name
+		} else if string(c) == "D" {
+			poInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
+			position = "DM :" + poInfo.Name
+		}
+
+		break
+	}
+
+	return by, position
+}
+
+func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.Info, postChannelName string) (string, error) {
 	// post aggregate message
 	var err error
 
@@ -109,23 +144,16 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 		}
 	}
 
-	fromChannelInfo, _ := fromAPI.GetChannelInfo(ev.Channel)
-	fromUserInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
-	if fromChannelInfo.Name == "" || fromUserInfo.Name == "" {
-		// ignore
-		// not user : bot
-		// not channel: group
-		return "", nil
-	}
+	by, position := dripValueByEV(fromAPI, ev, info)
 	param := slack.PostMessageParameters{}
 	channelField := slack.AttachmentField{
-		Title: "channel",
-		Value: fromChannelInfo.Name,
+		Title: "place",
+		Value: position,
 		Short: true,
 	}
 	userField := slack.AttachmentField{
-		Title: "User",
-		Value: fromUserInfo.Name,
+		Title: "By",
+		Value: by,
 		Short: true,
 	}
 	attachment := slack.Attachment{
@@ -146,6 +174,7 @@ func main() {
 	var err error
 	var wg sync.WaitGroup
 	var lastTimestamp string
+	var info *slack.Info
 
 	// parse args
 	var configPath = flag.String("config", "config.toml", "config file path")
@@ -177,10 +206,12 @@ func main() {
 				switch ev := msg.Data.(type) {
 				case *slack.HelloEvent:
 					// Ignore Hello
+				case *slack.ConnectedEvent:
+					info = ev.Info
 				case *slack.MessageEvent:
 					fmt.Printf("Message: %v\n", ev)
 					if lastTimestamp != ev.Timestamp {
-						lastTimestamp, err = postMessageToChannel(toAPI, fromAPI, ev, PrefixSlackChannel+fromTeam)
+						lastTimestamp, err = postMessageToChannel(toAPI, fromAPI, ev, info, PrefixSlackChannel+fromTeam)
 						if err != nil {
 							log.Println(err)
 						}
