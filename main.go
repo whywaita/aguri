@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
+	"sync"
 
 	"github.com/BurntSushi/toml"
 	"github.com/nlopes/slack"
@@ -92,11 +94,6 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	// post aggregate message
 	var err error
 
-	if err != nil {
-		log.Println("[ERROR] postMessageToChannel is fail")
-		return err
-	}
-
 	isExist, err := checkExistChannel(toAPI, postChannelName)
 	if err != nil {
 		log.Println("[ERROR] postMessageToChannel is fail")
@@ -141,6 +138,7 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 
 func main() {
 	var err error
+	var wg sync.WaitGroup
 
 	// parse args
 	var configPath = flag.String("config", "config.toml", "config file path")
@@ -149,6 +147,8 @@ func main() {
 	// initialize
 	logger := log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)
 	slack.SetLogger(logger)
+	cpus := runtime.NumCPU()
+	runtime.GOMAXPROCS(cpus)
 
 	toToken, froms, err := loadConfig(*configPath)
 	if err != nil {
@@ -156,32 +156,34 @@ func main() {
 	}
 
 	toAPI := slack.New(toToken)
-	fromAPI := slack.New(froms[0].Token)
+	// fromAPI := slack.New(froms[0].Token)
 
-	rtm := fromAPI.NewRTM()
-	go rtm.ManageConnection()
+	for _, from := range froms {
+		wg.Add(1)
+		go func() {
+			fromAPI := slack.New(from.Token)
+			rtm := fromAPI.NewRTM()
+			go rtm.ManageConnection()
+			for msg := range rtm.IncomingEvents {
+				switch ev := msg.Data.(type) {
+				case *slack.HelloEvent:
+					// Ignore Hello
+				case *slack.MessageEvent:
+					fmt.Printf("Message: %v\n", ev)
+					err = postMessageToChannel(toAPI, fromAPI, ev, PrefixSlackChannel+from.Team)
+					if err != nil {
+						log.Println(err)
+					}
 
-	for msg := range rtm.IncomingEvents {
-		switch ev := msg.Data.(type) {
-		case *slack.HelloEvent:
-			// Ignore Hello
-		case *slack.ConnectedEvent:
-			//fmt.Println("Infos:", ev.Info)
-			//fmt.Println("Connection counter:", ev.ConnectionCount)
-			// Replace #general with your Channel ID
-			//rtm.SendMessage(rtm.NewOutgoingMessage("Hello world", "#general"))
-		case *slack.MessageEvent:
-			fmt.Printf("Message: %v\n", ev)
-			err = postMessageToChannel(toAPI, fromAPI, ev, PrefixSlackChannel+froms[0].Team)
-			if err != nil {
-				log.Println(err)
+				case *slack.RTMError:
+					fmt.Printf("Error: %s\n", ev.Error())
+
+				default:
+					// Ignore
+				}
 			}
-
-		case *slack.RTMError:
-			fmt.Printf("Error: %s\n", ev.Error())
-
-		default:
-			// Ignore
-		}
+			wg.Done()
+		}()
 	}
+	wg.Wait()
 }
