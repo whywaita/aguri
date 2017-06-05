@@ -1,0 +1,29 @@
+{
+    "memo": "7b698e3c8bc7e6b11d78f7c30cce85213ad6ff6b5d93abcf4c6fb53069492472",
+    "projects": [
+        {
+            "name": "github.com/BurntSushi/toml",
+            "version": "v0.3.0",
+            "revision": "b26d9c308763d68093482582cea63d69be07a0f0",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/nlopes/slack",
+            "branch": "master",
+            "revision": "f243c7602fdf906248fc1f165284daa4e4d2d09e",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "golang.org/x/net",
+            "branch": "master",
+            "revision": "59a0b19b5533c7977ddeb86b017bf507ed407b12",
+            "packages": [
+                "websocket"
+            ]
+        }
+    ]
+}

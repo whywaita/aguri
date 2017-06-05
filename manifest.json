@@ -1,0 +1,10 @@
+{
+    "dependencies": {
+        "github.com/BurntSushi/toml": {
+            "branch": "master"
+        },
+        "github.com/nlopes/slack": {
+            "branch": "master"
+        }
+    }
+}
