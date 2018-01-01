@@ -112,7 +112,10 @@ func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.In
 		}
 	}
 
-	fromType, chName, _ := slack_lib.ConvertDisplayChannelName(fromAPI, ev)
+	fromType, chName, err := slack_lib.ConvertDisplayChannelName(fromAPI, ev)
+	if err != nil {
+		log.Println(err)
+	}
 	position := fromType + " : " + chName
 
 	return by, position
