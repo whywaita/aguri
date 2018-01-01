@@ -10,6 +10,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/nlopes/slack"
+	"github.com/whywaita/slack_lib"
 )
 
 const (
@@ -93,7 +94,6 @@ func makeNewChannel(api *slack.Client, name string) error {
 
 func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.Info) (string, string) {
 	by := ""
-	position := ""
 
 	// user or bot
 	if ev.Msg.BotID != "" {
@@ -112,31 +112,8 @@ func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.In
 		}
 	}
 
-	// public channel or private channel or group
-	// Public channel prefix : C
-	// Private channel prefix : G
-	// Direct message prefix : D
-	for _, c := range ev.Channel {
-		if string(c) == "C" {
-			poInfo, _ := fromAPI.GetChannelInfo(ev.Channel)
-			position = "Channel : " + poInfo.Name
-		} else if string(c) == "G" {
-			poInfo, _ := fromAPI.GetGroupInfo(ev.Channel)
-			position = "Group : " + poInfo.Name
-		} else if string(c) == "D" {
-			if ev.Msg.SubType != "" {
-				// SubType is not define user
-			} else {
-				poInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
-				position = "DM : " + poInfo.Name
-			}
-		} else {
-			position = " "
-		}
-
-		// check only first charactor
-		break
-	}
+	fromType, chName, _ := slack_lib.ConvertDisplayChannelName(fromAPI, ev)
+	position := fromType + " : " + chName
 
 	return by, position
 }
