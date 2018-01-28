@@ -96,7 +96,10 @@ func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.In
 	by := ""
 
 	// user or bot
-	if ev.Msg.BotID != "" {
+	if ev.Msg.BotID == "B01" {
+		// this is slackbot
+		by = "Bot : " + "Slack bot"
+	} else if ev.Msg.BotID != "" {
 		// this is bot
 		byInfo, _ := fromAPI.GetBotInfo(ev.Msg.BotID)
 		by = "Bot : " + byInfo.Name
