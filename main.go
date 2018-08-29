@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/BurntSushi/toml"
@@ -211,7 +212,9 @@ func main() {
 				case *slack.MessageEvent:
 					fmt.Printf("Message: %v\n", ev)
 					if lastTimestamp != ev.Timestamp {
-						lastTimestamp, err = postMessageToChannel(toAPI, fromAPI, ev, info, PrefixSlackChannel+fromTeam)
+						chName := PrefixSlackChannel + strings.ToLower(fromTeam)
+
+						lastTimestamp, err = postMessageToChannel(toAPI, fromAPI, ev, info, chName)
 						if err != nil {
 							log.Println(err)
 						}
