@@ -35,7 +35,7 @@ jobs:
           command: go mod verify
       - run:
           name: Run all tests
-          command: go test all
+          command: go test -v ./...
       - run:
           command: go get github.com/mitchellh/gox
       - run:
