@@ -1,27 +1,41 @@
 version: 2.0
 jobs:
   build:
-    working_directory: /go/src/github.com/whywaita/slack-aggregator
-    docker:
+    docker: &docker
       - image: circleci/golang:1.11.0
         environment:
           GO111MODULE: "on"
     steps:
       - checkout
-      - run:
-          name: Run tests
-          command: go test ./...
+      - restore_cache: &restore_cache
+          name: Restore go modules cache
+          keys:
+            - mod-{{ .Environment.COMMON_CACHE_KEY }}-{{ checksum "go.mod" }}
+      - run: &vendoring
+          name: Vendoring
+          command: go mod download
+      - save_cache: &save_cache
+          name: Save go modules cache
+          key: mod-{{ .Environment.COMMON_CACHE_KEY }}-{{ checksum "go.mod" }}
+          paths:
+            - /go/pkg/mod/cache
+
   deploy:
-    working_directory: /go/src/github.com/whywaita/slack-aggregator
-    docker:
-      - image: circleci/golang:1.11.0
-        environment:
-          GO111MODULE: "on"
+    docker: *docker
     steps:
       - checkout
+      - restore_cache: *restore_cache
+      - run: *vendoring
+      - save_cache: *save_cache
       - run:
-          name: Run tests
-          command: go test ./...
+          name: Add missing and remove unused modules
+          command: go mod tidy
+      - run:
+          name: Verify dependencies have expected content
+          command: go mod verify
+      - run:
+          name: Run all tests
+          command: go test all
       - run:
           command: go get github.com/mitchellh/gox
       - run:
@@ -30,6 +44,7 @@ jobs:
           command: gox -osarch "linux/amd64 linux/arm darwin/amd64 windows/amd64" -output "dist/{{.Dir}}_{{.OS}}_{{.Arch}}"
       - run:
           command: ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} --replace $(cat release_tag) dist/
+
 workflows:
   version: 2
   build-and-deploy:
