@@ -16,7 +16,6 @@ import (
 
 const (
 	PrefixSlackChannel = "aggr-"
-	PostUserName       = "slack-aggregator"
 )
 
 type Config struct {
@@ -99,20 +98,20 @@ func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.In
 	// user or bot
 	if ev.Msg.BotID == "B01" {
 		// this is slackbot
-		by = "Bot : " + "Slack bot"
+		by = "Bot: " + "Slack bot"
 	} else if ev.Msg.BotID != "" {
 		// this is bot
 		byInfo, _ := fromAPI.GetBotInfo(ev.Msg.BotID)
-		by = "Bot : " + byInfo.Name
+		by = "Bot: " + byInfo.Name
 	} else if ev.Msg.SubType != "" {
 		// SubType is not define user
-		by = "Status : " + ev.Msg.SubType
+		by = "Status: " + ev.Msg.SubType
 	} else {
 		// user
 		byInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
-		by = "User : " + byInfo.Name
+		by = byInfo.Name
 		if ev.Msg.SubType != "" {
-			by += "\n" + "Status : " + ev.Msg.SubType
+			by += "\n" + "Status: " + ev.Msg.SubType
 		}
 	}
 
@@ -144,24 +143,21 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 		}
 	}
 
-	by, position := dripValueByEV(fromAPI, ev, info)
-	param := slack.PostMessageParameters{}
-	channelField := slack.AttachmentField{
-		Title: "place",
-		Value: position,
-		Short: true,
-	}
-	userField := slack.AttachmentField{
-		Title: "By",
-		Value: by,
-		Short: true,
-	}
+	user, position := dripValueByEV(fromAPI, ev, info)
+  u, err := fromAPI.GetUserInfo(ev.Msg.User)
+  if err != nil {
+    return "", err
+  }
+
+	param := slack.PostMessageParameters{
+    IconURL: u.Profile.Image192,
+  }
 	attachment := slack.Attachment{
 		Pretext: ev.Text,
 	}
-	attachment.Fields = []slack.AttachmentField{channelField, userField}
 	param.Attachments = []slack.Attachment{attachment}
-	param.Username = PostUserName
+	param.Username = user + " from " + position
+
 	_, _, err = toAPI.PostMessage(postChannelName, "", param)
 	if err != nil {
 		log.Println("[ERROR] postMessageToChannel is fail")
@@ -171,28 +167,11 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	return ev.Timestamp, nil
 }
 
-func main() {
-	var err error
+func catchMessage(froms []Froms, toAPI *slack.Client) error {
 	var wg sync.WaitGroup
+  var info *slack.Info
 	var lastTimestamp string
-	var info *slack.Info
-
-	// parse args
-	var configPath = flag.String("config", "config.toml", "config file path")
-	flag.Parse()
-
-	// initialize
-	logger := log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)
-	slack.SetLogger(logger)
-	cpus := runtime.NumCPU()
-	runtime.GOMAXPROCS(cpus)
-
-	toToken, froms, err := loadConfig(*configPath)
-	if err != nil {
-		log.Fatalln("[ERROR] ", err)
-	}
-
-	toAPI := slack.New(toToken)
+  var err error
 
 	for _, from := range froms {
 		wg.Add(1)
@@ -231,4 +210,30 @@ func main() {
 		}()
 	}
 	wg.Wait()
+
+  return nil
+}
+
+func main() {
+	// parse args
+	var configPath = flag.String("config", "config.toml", "config file path")
+	flag.Parse()
+
+	// initialize
+	logger := log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)
+	slack.SetLogger(logger)
+	cpus := runtime.NumCPU()
+	runtime.GOMAXPROCS(cpus)
+
+	toToken, froms, err := loadConfig(*configPath)
+	if err != nil {
+		log.Fatalln("[ERROR] ", err)
+	}
+
+	toAPI := slack.New(toToken)
+
+  err = catchMessage(froms, toAPI)
+  if err != nil {
+    log.Fatal(err)
+  }
 }
