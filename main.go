@@ -16,7 +16,6 @@ import (
 
 const (
 	PrefixSlackChannel = "aggr-"
-	PostUserName       = "slack-aggregator"
 )
 
 type Config struct {
@@ -99,20 +98,20 @@ func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.In
 	// user or bot
 	if ev.Msg.BotID == "B01" {
 		// this is slackbot
-		by = "Bot : " + "Slack bot"
+		by = "Bot: " + "Slack bot"
 	} else if ev.Msg.BotID != "" {
 		// this is bot
 		byInfo, _ := fromAPI.GetBotInfo(ev.Msg.BotID)
-		by = "Bot : " + byInfo.Name
+		by = "Bot: " + byInfo.Name
 	} else if ev.Msg.SubType != "" {
 		// SubType is not define user
-		by = "Status : " + ev.Msg.SubType
+		by = "Status: " + ev.Msg.SubType
 	} else {
 		// user
 		byInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
 		by = byInfo.Name
 		if ev.Msg.SubType != "" {
-			by += "\n" + "Status : " + ev.Msg.SubType
+			by += "\n" + "Status: " + ev.Msg.SubType
 		}
 	}
 
@@ -145,7 +144,14 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	}
 
 	user, position := dripValueByEV(fromAPI, ev, info)
-	param := slack.PostMessageParameters{}
+  u, err := fromAPI.GetUserInfo(ev.Msg.User)
+  if err != nil {
+    return "", err
+  }
+
+	param := slack.PostMessageParameters{
+    IconURL: u.Profile.Image192,
+  }
 	attachment := slack.Attachment{
 		Pretext: ev.Text,
 	}
