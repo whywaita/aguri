@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -16,6 +17,10 @@ import (
 
 const (
 	PrefixSlackChannel = "aggr-"
+)
+
+var (
+	reUser = regexp.MustCompile("<@U.*>")
 )
 
 type Config struct {
@@ -143,17 +148,36 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 		}
 	}
 
+	// get source username and channel, im, group
 	user, position := dripValueByEV(fromAPI, ev, info)
 	u, err := fromAPI.GetUserInfo(ev.Msg.User)
 	if err != nil {
 		return "", err
 	}
 
+	// convert user id to user name
+	msg := ev.Text
+
+	userIds := reUser.FindAllStringSubmatch(ev.Text, -1)
+	if len(userIds) != 0 {
+		for _, ids := range userIds {
+			id := strings.TrimPrefix(ids[0], "<@")
+			id = strings.TrimSuffix(id, ">")
+			name, err := slack_lib.ConvertDisplayName(fromAPI, id)
+			if err != nil {
+				log.Println(err)
+				break
+			}
+			msg = strings.Replace(msg, id, name, -1)
+		}
+	}
+
+	// post message
 	param := slack.PostMessageParameters{
 		IconURL: u.Profile.Image192,
 	}
 	attachment := slack.Attachment{
-		Pretext: ev.Text,
+		Pretext: msg,
 	}
 	param.Attachments = []slack.Attachment{attachment}
 	param.Username = user + " from " + position
