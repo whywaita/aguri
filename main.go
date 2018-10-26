@@ -144,14 +144,14 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	}
 
 	user, position := dripValueByEV(fromAPI, ev, info)
-  u, err := fromAPI.GetUserInfo(ev.Msg.User)
-  if err != nil {
-    return "", err
-  }
+	u, err := fromAPI.GetUserInfo(ev.Msg.User)
+	if err != nil {
+		return "", err
+	}
 
 	param := slack.PostMessageParameters{
-    IconURL: u.Profile.Image192,
-  }
+		IconURL: u.Profile.Image192,
+	}
 	attachment := slack.Attachment{
 		Pretext: ev.Text,
 	}
@@ -169,9 +169,9 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 
 func catchMessage(froms []Froms, toAPI *slack.Client) error {
 	var wg sync.WaitGroup
-  var info *slack.Info
+	var info *slack.Info
 	var lastTimestamp string
-  var err error
+	var err error
 
 	for _, from := range froms {
 		wg.Add(1)
@@ -211,7 +211,7 @@ func catchMessage(froms []Froms, toAPI *slack.Client) error {
 	}
 	wg.Wait()
 
-  return nil
+	return nil
 }
 
 func main() {
@@ -232,8 +232,8 @@ func main() {
 
 	toAPI := slack.New(toToken)
 
-  err = catchMessage(froms, toAPI)
-  if err != nil {
-    log.Fatal(err)
-  }
+	err = catchMessage(froms, toAPI)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
