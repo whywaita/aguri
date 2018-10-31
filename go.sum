@@ -10,3 +10,5 @@ github.com/pkg/errors v0.8.0 h1:WdK/asTD0HN+q6hsWO3/vpuAkAr+tw6aNJNDFFf0+qw=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/whywaita/slack_lib v0.0.0-20180101180533-809f154dd046 h1:M0sWkvPxXJK2S7pJ9iLcMlECsnuynO7axUUUkBibZac=
 github.com/whywaita/slack_lib v0.0.0-20180101180533-809f154dd046/go.mod h1:Jy8EQn2kDpbv0eSWsm3z/0WSpym5uVS5IPoRFbQfRzs=
+github.com/whywaita/slack_lib v0.0.0-20181031093404-ddc7152491e6 h1:2baqkG5YqhD1aJRNz4eDUknzI9d2m4jYoKoIc6S4o+o=
+github.com/whywaita/slack_lib v0.0.0-20181031093404-ddc7152491e6/go.mod h1:Jy8EQn2kDpbv0eSWsm3z/0WSpym5uVS5IPoRFbQfRzs=

@@ -92,37 +92,6 @@ func makeNewChannel(api *slack.Client, name string) error {
 	return nil
 }
 
-func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.Info) (string, string) {
-	by := ""
-
-	// user or bot
-	if ev.Msg.BotID == "B01" {
-		// this is slackbot
-		by = "Bot: " + "Slack bot"
-	} else if ev.Msg.BotID != "" {
-		// this is bot
-		byInfo, _ := fromAPI.GetBotInfo(ev.Msg.BotID)
-		by = "Bot: " + byInfo.Name
-	} else if ev.Msg.SubType != "" {
-		// SubType is not define user
-		by = "Status: " + ev.Msg.SubType
-	} else {
-		// user
-		byInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
-		by = byInfo.Name
-		if ev.Msg.SubType != "" {
-			by += "\n" + "Status: " + ev.Msg.SubType
-		}
-	}
-
-	_, name, err := slack_lib.ConvertDisplayChannelName(fromAPI, ev)
-	if err != nil {
-		log.Println(err)
-	}
-
-	return by, name
-}
-
 func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.Info, postChannelName string) (string, error) {
 	// post aggregate message
 	var err error
@@ -143,20 +112,34 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	}
 
 	// get source username and channel, im, group
-	user, position := dripValueByEV(fromAPI, ev, info)
-	u, err := fromAPI.GetUserInfo(ev.Msg.User)
+	user, usertype, err := slack_lib.ConvertDisplayUserName(fromAPI, ev)
 	if err != nil {
 		return "", err
 	}
 
-	// convert user id to user name
+	_, position, err := slack_lib.ConvertDisplayChannelName(fromAPI, ev)
+	if err != nil {
+		return "", err
+	}
+
+	icon := ""
+	if usertype == "user" {
+		u, err := fromAPI.GetUserInfo(ev.Msg.User)
+		if err != nil {
+			return "", err
+		}
+		icon = u.Profile.Image192
+	}
+
+	// convert user id to user name in message
 	msg := ev.Text
 	userIds := reUser.FindAllStringSubmatch(ev.Text, -1)
 	if len(userIds) != 0 {
 		for _, ids := range userIds {
+			fmt.Println(ids[0])
 			id := strings.TrimPrefix(ids[0], "<@")
 			id = strings.TrimSuffix(id, ">")
-			name, err := slack_lib.ConvertDisplayName(fromAPI, id)
+			name, _, err := slack_lib.ConvertDisplayUserName(fromAPI, ev)
 			if err != nil {
 				log.Println(err)
 				break
@@ -167,7 +150,7 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 
 	// post message
 	param := slack.PostMessageParameters{
-		IconURL: u.Profile.Image192,
+		IconURL: icon,
 	}
 	attachment := slack.Attachment{
 		Pretext: msg,
