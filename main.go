@@ -20,7 +20,7 @@ const (
 
 var (
 	reUser    = regexp.MustCompile("<@U.*>")
-	reChannel = regexp.MustCompile("(.*) from (.*) : (.*)")
+	reChannel = regexp.MustCompile("(.*)@(.*)")
 	wtc       = map[string]string{} // "workspace,timestamp" : channel
 )
 
@@ -115,13 +115,12 @@ func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.In
 		}
 	}
 
-	fromType, chName, err := slack_lib.ConvertDisplayChannelName(fromAPI, ev)
+	_, name, err := slack_lib.ConvertDisplayChannelName(fromAPI, ev)
 	if err != nil {
 		log.Println(err)
 	}
-	position := fromType + " : " + chName
 
-	return by, position
+	return by, name
 }
 
 func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.Info, postChannelName string) (string, error) {
@@ -152,7 +151,6 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 
 	// convert user id to user name
 	msg := ev.Text
-
 	userIds := reUser.FindAllStringSubmatch(ev.Text, -1)
 	if len(userIds) != 0 {
 		for _, ids := range userIds {
@@ -175,7 +173,7 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 		Pretext: msg,
 	}
 	param.Attachments = []slack.Attachment{attachment}
-	param.Username = user + " from " + position
+	param.Username = user + "@" + position
 
 	_, _, err = toAPI.PostMessage(postChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
 	if err != nil {
@@ -251,6 +249,7 @@ func replyMessage(toAPI *slack.Client, froms map[string]string) {
 				// not aggr channel
 				break
 			}
+
 			if fromType != "channel" {
 				// TODO: implement other type
 				break
@@ -270,8 +269,9 @@ func replyMessage(toAPI *slack.Client, froms map[string]string) {
 
 				// parse username
 				userNames := reChannel.FindAllStringSubmatch(ev.Username, -1)
-				chName := userNames[0][3]
+				chName := userNames[0][2]
 
+				// TODO: gc
 				wtc[k] = chName
 
 				break
@@ -279,6 +279,8 @@ func replyMessage(toAPI *slack.Client, froms map[string]string) {
 
 			parent := strings.Join([]string{workspace, ev.ThreadTimestamp}, ",")
 			sourceChannelName := wtc[parent] // channel name
+
+			// TODO: if can't get channel name, search use slack API
 
 			// TODO: reuse api instance
 			api := slack.New(froms[workspace])
