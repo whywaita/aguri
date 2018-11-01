@@ -112,7 +112,7 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	}
 
 	// get source username and channel, im, group
-	user, usertype, err := slack_lib.ConvertDisplayUserName(fromAPI, ev)
+	user, usertype, err := slack_lib.ConvertDisplayUserName(fromAPI, ev, "")
 	if err != nil {
 		return "", err
 	}
@@ -139,7 +139,7 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 			fmt.Println(ids[0])
 			id := strings.TrimPrefix(ids[0], "<@")
 			id = strings.TrimSuffix(id, ">")
-			name, _, err := slack_lib.ConvertDisplayUserName(fromAPI, ev)
+			name, _, err := slack_lib.ConvertDisplayUserName(fromAPI, ev, id)
 			if err != nil {
 				log.Println(err)
 				break
