@@ -232,6 +232,9 @@ func replyMessage(toAPI *slack.Client, froms map[string]string) {
 				// not aggr channel
 				break
 			}
+			if ev.Msg.User == "USLACKBOT" {
+				break
+			}
 
 			if fromType != "channel" {
 				// TODO: implement other type
