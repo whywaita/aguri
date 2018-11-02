@@ -117,7 +117,7 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 		return "", err
 	}
 
-	_, position, err := slack_lib.ConvertDisplayChannelName(fromAPI, ev)
+	fType, position, err := slack_lib.ConvertDisplayChannelName(fromAPI, ev)
 	if err != nil {
 		return "", err
 	}
@@ -155,7 +155,7 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 		Pretext: msg,
 	}
 	param.Attachments = []slack.Attachment{attachment}
-	param.Username = user + "@" + position
+	param.Username = user + "@" + strings.ToLower(fType[:1]) + ":" + position
 
 	_, _, err = toAPI.PostMessage(postChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
 	if err != nil {
