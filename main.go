@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	reUser    = regexp.MustCompile("<@U.*>")
+	reUser    = regexp.MustCompile(`<@U(\S+)>`)
 	reChannel = regexp.MustCompile("(.*)@(.*)")
 	wtc       = map[string]string{} // "workspace,timestamp" : channel
 )
@@ -136,7 +136,6 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	userIds := reUser.FindAllStringSubmatch(ev.Text, -1)
 	if len(userIds) != 0 {
 		for _, ids := range userIds {
-			fmt.Println(ids[0])
 			id := strings.TrimPrefix(ids[0], "<@")
 			id = strings.TrimSuffix(id, ">")
 			name, _, err := slack_lib.ConvertDisplayUserName(fromAPI, ev, id)
