@@ -265,7 +265,7 @@ func replyMessage(toAPI *slack.Client, froms map[string]string) {
 			parent := strings.Join([]string{workspace, ev.ThreadTimestamp}, ",")
 			sourceChannelName := wtc[parent] // channel name
 
-			// TODO: if can't get channel name, search use slack API
+			// TODO: if can't get channel name, search old message using slack API
 
 			// TODO: reuse api instance
 			api := slack.New(froms[workspace])
