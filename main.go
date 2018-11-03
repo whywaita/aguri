@@ -20,7 +20,7 @@ const (
 
 var (
 	reUser    = regexp.MustCompile(`<@U(\S+)>`)
-	reChannel = regexp.MustCompile("(.*)@(.*)")
+	reChannel = regexp.MustCompile(`(\S+)@(\S+):(\S+)`)
 	wtc       = map[string]string{} // "workspace,timestamp" : channel
 )
 
@@ -254,7 +254,13 @@ func replyMessage(toAPI *slack.Client, froms map[string]string) {
 
 				// parse username
 				userNames := reChannel.FindAllStringSubmatch(ev.Username, -1)
-				chName := userNames[0][2]
+				if len(userNames) == 0 || userNames[0][2] != "c" {
+					// miss regexp
+					// or not channel
+					break
+				}
+
+				chName := userNames[0][3]
 
 				// TODO: gc
 				wtc[k] = chName
