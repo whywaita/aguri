@@ -234,6 +234,10 @@ func replyMessage(toAPI *slack.Client, froms map[string]string) {
 			if ev.Msg.User == "USLACKBOT" {
 				break
 			}
+			if ev.Msg.Text == "" {
+				// not normal message
+				break
+			}
 
 			if fromType != "channel" {
 				// TODO: implement other type
