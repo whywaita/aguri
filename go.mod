@@ -6,5 +6,5 @@ require (
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3 // indirect
 	github.com/nlopes/slack v0.4.0 // indirect
 	github.com/pkg/errors v0.8.0 // indirect
-	github.com/whywaita/slack_lib v0.0.0-20180101180533-809f154dd046 // indirect
+	github.com/whywaita/slack_lib v0.0.0-20181101084338-ab9413794b38 // indirect
 )

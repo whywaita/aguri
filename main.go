@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"regexp"
 	"runtime"
 	"strings"
@@ -20,7 +19,9 @@ const (
 )
 
 var (
-	reUser = regexp.MustCompile("<@U.*>")
+	reUser    = regexp.MustCompile(`<@U(\S+)>`)
+	reChannel = regexp.MustCompile(`(\S+)@(\S+):(\S+)`)
+	wtc       = map[string]string{} // "workspace,timestamp" : channel
 )
 
 type Config struct {
@@ -28,26 +29,22 @@ type Config struct {
 	From map[string]From `toml:"from"`
 }
 
+// for toml
 type To struct {
 	Token string `toml:"token"`
 }
 
+// for toml
 type From struct {
 	Token string `toml:"token"`
 }
 
-type Froms struct {
-	Team  string
-	Token string
-}
-
-func loadConfig(configPath string) (string, []Froms, error) {
+func loadConfig(configPath string) (string, map[string]string, error) {
 	var tomlConfig Config
 
 	var toToken string
 	var err error
-	froms := []Froms{}
-	from := Froms{}
+	froms := map[string]string{}
 
 	// load comfig file
 	_, err = toml.DecodeFile(configPath, &tomlConfig)
@@ -59,9 +56,7 @@ func loadConfig(configPath string) (string, []Froms, error) {
 	toToken = tomlConfig.To.Token
 
 	for name, data := range tomlConfig.From {
-		from.Team = name
-		from.Token = data.Token
-		froms = append(froms, from)
+		froms[name] = data.Token
 	}
 
 	return toToken, froms, err
@@ -97,38 +92,6 @@ func makeNewChannel(api *slack.Client, name string) error {
 	return nil
 }
 
-func dripValueByEV(fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.Info) (string, string) {
-	by := ""
-
-	// user or bot
-	if ev.Msg.BotID == "B01" {
-		// this is slackbot
-		by = "Bot: " + "Slack bot"
-	} else if ev.Msg.BotID != "" {
-		// this is bot
-		byInfo, _ := fromAPI.GetBotInfo(ev.Msg.BotID)
-		by = "Bot: " + byInfo.Name
-	} else if ev.Msg.SubType != "" {
-		// SubType is not define user
-		by = "Status: " + ev.Msg.SubType
-	} else {
-		// user
-		byInfo, _ := fromAPI.GetUserInfo(ev.Msg.User)
-		by = byInfo.Name
-		if ev.Msg.SubType != "" {
-			by += "\n" + "Status: " + ev.Msg.SubType
-		}
-	}
-
-	fromType, chName, err := slack_lib.ConvertDisplayChannelName(fromAPI, ev)
-	if err != nil {
-		log.Println(err)
-	}
-	position := fromType + " : " + chName
-
-	return by, position
-}
-
 func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, info *slack.Info, postChannelName string) (string, error) {
 	// post aggregate message
 	var err error
@@ -149,21 +112,33 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	}
 
 	// get source username and channel, im, group
-	user, position := dripValueByEV(fromAPI, ev, info)
-	u, err := fromAPI.GetUserInfo(ev.Msg.User)
+	user, usertype, err := slack_lib.ConvertDisplayUserName(fromAPI, ev, "")
 	if err != nil {
 		return "", err
 	}
 
-	// convert user id to user name
-	msg := ev.Text
+	fType, position, err := slack_lib.ConvertDisplayChannelName(fromAPI, ev)
+	if err != nil {
+		return "", err
+	}
 
+	icon := ""
+	if usertype == "user" {
+		u, err := fromAPI.GetUserInfo(ev.Msg.User)
+		if err != nil {
+			return "", err
+		}
+		icon = u.Profile.Image192
+	}
+
+	// convert user id to user name in message
+	msg := ev.Text
 	userIds := reUser.FindAllStringSubmatch(ev.Text, -1)
 	if len(userIds) != 0 {
 		for _, ids := range userIds {
 			id := strings.TrimPrefix(ids[0], "<@")
 			id = strings.TrimSuffix(id, ">")
-			name, err := slack_lib.ConvertDisplayName(fromAPI, id)
+			name, _, err := slack_lib.ConvertDisplayUserName(fromAPI, ev, id)
 			if err != nil {
 				log.Println(err)
 				break
@@ -174,15 +149,15 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 
 	// post message
 	param := slack.PostMessageParameters{
-		IconURL: u.Profile.Image192,
+		IconURL: icon,
 	}
 	attachment := slack.Attachment{
 		Pretext: msg,
 	}
 	param.Attachments = []slack.Attachment{attachment}
-	param.Username = user + " from " + position
+	param.Username = user + "@" + strings.ToLower(fType[:1]) + ":" + position
 
-	_, _, err = toAPI.PostMessage(postChannelName, "", param)
+	_, _, err = toAPI.PostMessage(postChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
 	if err != nil {
 		log.Println("[ERROR] postMessageToChannel is fail")
 		return "", err
@@ -191,17 +166,17 @@ func postMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	return ev.Timestamp, nil
 }
 
-func catchMessage(froms []Froms, toAPI *slack.Client) error {
+func catchMessage(froms map[string]string, toAPI *slack.Client) error {
 	var wg sync.WaitGroup
 	var info *slack.Info
 	var lastTimestamp string
 	var err error
 
-	for _, from := range froms {
+	for team, token := range froms {
 		wg.Add(1)
 		// pass goroutine miss ref: http://qiita.com/sudix/items/67d4cad08fe88dcb9a6d
-		fromToken := from.Token
-		fromTeam := from.Team
+		fromToken := token
+		fromTeam := team
 		go func() {
 			fromAPI := slack.New(fromToken)
 			rtm := fromAPI.NewRTM()
@@ -213,7 +188,8 @@ func catchMessage(froms []Froms, toAPI *slack.Client) error {
 				case *slack.ConnectedEvent:
 					info = ev.Info
 				case *slack.MessageEvent:
-					fmt.Printf("Message: %v\n", ev)
+					// fmt.Printf("Message: %v\n", ev)
+
 					if lastTimestamp != ev.Timestamp {
 						chName := PrefixSlackChannel + strings.ToLower(fromTeam)
 
@@ -222,10 +198,8 @@ func catchMessage(froms []Froms, toAPI *slack.Client) error {
 							log.Println(err)
 						}
 					}
-
 				case *slack.RTMError:
 					fmt.Printf("Error: %s\n", ev.Error())
-
 				default:
 					// Ignore
 				}
@@ -238,14 +212,101 @@ func catchMessage(froms []Froms, toAPI *slack.Client) error {
 	return nil
 }
 
+func replyMessage(toAPI *slack.Client, froms map[string]string) {
+	rtm := toAPI.NewRTM()
+	go rtm.ManageConnection()
+	for msg := range rtm.IncomingEvents {
+		switch ev := msg.Data.(type) {
+		case *slack.HelloEvent:
+			// Ignore Hello
+			//case *slack.ConnectedEvent:
+			//	info = ev.Info
+		case *slack.MessageEvent:
+			fromType, aggrChName, err := slack_lib.ConvertDisplayChannelName(toAPI, ev)
+			if err != nil {
+				log.Println(err)
+				break
+			}
+			if !strings.Contains(aggrChName, PrefixSlackChannel) {
+				// not aggr channel
+				break
+			}
+			if ev.Msg.User == "USLACKBOT" {
+				break
+			}
+			if ev.Msg.Text == "" {
+				// not normal message
+				break
+			}
+
+			if fromType != "channel" {
+				// TODO: implement other type
+				break
+			}
+
+			workspace := strings.TrimPrefix(aggrChName, PrefixSlackChannel)
+
+			if ev.ThreadTimestamp == "" {
+				// maybe not in thread
+
+				// register post to kv
+				k := strings.Join([]string{workspace, ev.Timestamp}, ",")
+
+				if ev.Username == "" {
+					break
+				}
+
+				// parse username
+				userNames := reChannel.FindAllStringSubmatch(ev.Username, -1)
+				if len(userNames) == 0 || userNames[0][2] != "c" {
+					// miss regexp
+					// or not channel
+					break
+				}
+
+				chName := userNames[0][3]
+
+				// TODO: gc
+				wtc[k] = chName
+
+				break
+			}
+
+			parent := strings.Join([]string{workspace, ev.ThreadTimestamp}, ",")
+			sourceChannelName := wtc[parent] // channel name
+
+			// TODO: if can't get channel name, search old message using slack API
+
+			// TODO: reuse api instance
+			api := slack.New(froms[workspace])
+			param := slack.PostMessageParameters{
+				AsUser: true,
+			}
+
+			_, _, err = api.PostMessage(sourceChannelName, slack.MsgOptionText(ev.Text, false), slack.MsgOptionPostMessageParameters(param))
+			if err != nil {
+				log.Println(err)
+				break
+			}
+
+		case *slack.RTMError:
+			fmt.Printf("Error: %s\n", ev.Error())
+
+		default:
+			// Ignore
+		}
+
+	}
+}
+
 func main() {
 	// parse args
 	var configPath = flag.String("config", "config.toml", "config file path")
 	flag.Parse()
 
 	// initialize
-	logger := log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)
-	slack.SetLogger(logger)
+	//logger := log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)
+	//slack.SetLogger(logger)
 	cpus := runtime.NumCPU()
 	runtime.GOMAXPROCS(cpus)
 
@@ -255,6 +316,7 @@ func main() {
 	}
 
 	toAPI := slack.New(toToken)
+	go replyMessage(toAPI, froms)
 
 	err = catchMessage(froms, toAPI)
 	if err != nil {
