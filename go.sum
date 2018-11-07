@@ -6,11 +6,9 @@ github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3 h1:sHsPfNMAG70QAvKbd
 github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3/go.mod h1:yL958EeXv8Ylng6IfnvG4oflryUi3vgA3xPs9hmII1s=
 github.com/nlopes/slack v0.4.0 h1:OVnHm7lv5gGT5gkcHsZAyw++oHVFihbjWbL3UceUpiA=
 github.com/nlopes/slack v0.4.0/go.mod h1:jVI4BBK3lSktibKahxBF74txcK2vyvkza1z/+rRnVAM=
+github.com/nlopes/slack v0.4.1-0.20181105183241-cd7590326897 h1:aGEIq4+lKi+3JGxd4fG3Xlv/dXwNHo1c006R+cBi2KU=
+github.com/nlopes/slack v0.4.1-0.20181105183241-cd7590326897/go.mod h1:jVI4BBK3lSktibKahxBF74txcK2vyvkza1z/+rRnVAM=
 github.com/pkg/errors v0.8.0 h1:WdK/asTD0HN+q6hsWO3/vpuAkAr+tw6aNJNDFFf0+qw=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
-github.com/whywaita/slack_lib v0.0.0-20180101180533-809f154dd046 h1:M0sWkvPxXJK2S7pJ9iLcMlECsnuynO7axUUUkBibZac=
-github.com/whywaita/slack_lib v0.0.0-20180101180533-809f154dd046/go.mod h1:Jy8EQn2kDpbv0eSWsm3z/0WSpym5uVS5IPoRFbQfRzs=
-github.com/whywaita/slack_lib v0.0.0-20181031093404-ddc7152491e6 h1:2baqkG5YqhD1aJRNz4eDUknzI9d2m4jYoKoIc6S4o+o=
-github.com/whywaita/slack_lib v0.0.0-20181031093404-ddc7152491e6/go.mod h1:Jy8EQn2kDpbv0eSWsm3z/0WSpym5uVS5IPoRFbQfRzs=
 github.com/whywaita/slack_lib v0.0.0-20181101084338-ab9413794b38 h1:kO4iTlAK6wzdPryIug3AoeW/eB5K3X1PvQ8+V8EpHdA=
 github.com/whywaita/slack_lib v0.0.0-20181101084338-ab9413794b38/go.mod h1:Jy8EQn2kDpbv0eSWsm3z/0WSpym5uVS5IPoRFbQfRzs=
