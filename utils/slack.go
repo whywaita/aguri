@@ -2,10 +2,15 @@ package utils
 
 import (
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/nlopes/slack"
 	"github.com/whywaita/slack_lib"
+)
+
+var (
+	reUser = regexp.MustCompile(`<@U(\S+)>`)
 )
 
 func checkExistChannel(api *slack.Client, searchName string) (bool, error) {

@@ -15,7 +15,6 @@ const (
 )
 
 var (
-	reUser    = regexp.MustCompile(`<@U(\S+)>`)
 	reChannel = regexp.MustCompile(`(\S+)@(\S+):(\S+)`)
 	wtc       = map[string]string{} // "workspace,timestamp" : channel
 )
