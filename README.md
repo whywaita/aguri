@@ -8,6 +8,7 @@ slack-aggregator is aggregator of slack message
 
 ## Getting Started
 
+- get binary from [here](https://github.com/whywaita/slack-aggregator/releases)
 - generate slack web token [here](https://api.slack.com/custom-integrations/legacy-tokens)
 - make `config.toml`. default PATH is `./config.toml`.
 
