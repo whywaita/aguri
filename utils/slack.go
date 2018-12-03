@@ -102,16 +102,26 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	param := slack.PostMessageParameters{
 		IconURL: icon,
 	}
-	attachment := slack.Attachment{
-		Pretext: msg,
-	}
-	param.Attachments = []slack.Attachment{attachment}
 	param.Username = user + "@" + strings.ToLower(fType[:1]) + ":" + position
 
-	_, _, err = toAPI.PostMessage(postChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
-	if err != nil {
-		log.Println("[ERROR] postMessageToChannel is fail")
-		return "", err
+	attachments := ev.Attachments
+
+	if msg != "" {
+		_, _, err = toAPI.PostMessage(postChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
+		if err != nil {
+			log.Println("[ERROR] postMessageToChannel is fail")
+			return "", err
+		}
+	}
+
+	if attachments != nil {
+		for _, attachment := range attachments {
+			_, _, err = toAPI.PostMessage(postChannelName, slack.MsgOptionPostMessageParameters(param), slack.MsgOptionAttachments(attachment))
+			if err != nil {
+				log.Println("[ERROR] postMessageToChannel is fail")
+				return "", err
+			}
+		}
 	}
 
 	return ev.Timestamp, nil
