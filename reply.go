@@ -24,8 +24,16 @@ func validateMessage(fromType, aggrChannelName string, ev *slack.MessageEvent) b
 		return false
 	}
 
-	if fromType != "channel" {
+	if fromType != "channel" && fromType != "group" {
 		// TODO: implement other type
+		return false
+	}
+
+	return true
+}
+
+func validateParsedMessage(userNames [][]string) bool {
+	if len(userNames) == 0 {
 		return false
 	}
 
@@ -62,7 +70,7 @@ func replyMessage(toAPI *slack.Client, froms map[string]string) {
 
 				// parse username
 				userNames := reChannel.FindAllStringSubmatch(ev.Username, -1)
-				if len(userNames) == 0 || userNames[0][2] != "c" {
+				if !validateParsedMessage(userNames) {
 					// miss regexp
 					// or not channel
 					break
