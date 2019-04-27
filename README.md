@@ -1,6 +1,6 @@
-# slack-aggregator
+# aguri
 
-slack-aggregator is aggregator of slack message
+aguri (あぐり) is aggregator of slack message
 
 - aggregate multi workspace to one workspace
 - response simple message
