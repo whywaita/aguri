@@ -1,16 +1,24 @@
-package main
+package reply
 
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/nlopes/slack"
+	"github.com/whywaita/aguri/config"
+	"github.com/whywaita/aguri/store"
 	"github.com/whywaita/slack_lib"
 )
 
+var (
+	reChannel    = regexp.MustCompile(`(\S+)@(\S+):(\S+)`)
+	apiInstances = map[string]*slack.Client{}
+)
+
 func validateMessage(fromType, aggrChannelName string, ev *slack.MessageEvent) bool {
-	if !strings.Contains(aggrChannelName, PrefixSlackChannel) {
+	if !strings.Contains(aggrChannelName, config.PrefixSlackChannel) {
 		// not aggr channel
 		return false
 	}
@@ -40,7 +48,18 @@ func validateParsedMessage(userNames [][]string) bool {
 	return true
 }
 
-func replyMessage(toAPI *slack.Client, froms map[string]string) {
+func getSlackApiInstance(workspaceName string) *slack.Client {
+	api, ok := apiInstances[workspaceName]
+	if ok == false {
+		// not found
+		api = slack.New(store.GetConfigFromAPI(workspaceName))
+		apiInstances[workspaceName] = api
+	}
+
+	return api
+}
+
+func HandleReplyMessage(toAPI *slack.Client) {
 	rtm := toAPI.NewRTM()
 	go rtm.ManageConnection()
 	for msg := range rtm.IncomingEvents {
@@ -56,14 +75,10 @@ func replyMessage(toAPI *slack.Client, froms map[string]string) {
 				break
 			}
 
-			workspace := strings.TrimPrefix(aggrChName, PrefixSlackChannel)
+			workspace := strings.TrimPrefix(aggrChName, config.PrefixSlackChannel)
 
 			if ev.ThreadTimestamp == "" {
 				// maybe not in thread
-
-				// register post to kv
-				k := strings.Join([]string{workspace, ev.Timestamp}, ",")
-
 				if ev.Username == "" {
 					break
 				}
@@ -77,20 +92,19 @@ func replyMessage(toAPI *slack.Client, froms map[string]string) {
 				}
 
 				chName := userNames[0][3]
-
-				// TODO: gc
-				wtc[k] = chName
+				store.SetSourceChannelName(workspace, ev.Timestamp, chName)
 
 				break
 			}
 
-			parent := strings.Join([]string{workspace, ev.ThreadTimestamp}, ",")
-			sourceChannelName := wtc[parent] // channel name
+			sourceChannelName, err := store.GetSourceChannelName(workspace, ev.ThreadTimestamp)
+			if err != nil {
+				// TODO: if can't get channel name, search old message using slack API
+				log.Println(err)
+			}
 
-			// TODO: if can't get channel name, search old message using slack API
-
-			// TODO: reuse api instance
-			api := slack.New(froms[workspace])
+			// Post
+			api := getSlackApiInstance(workspace)
 			param := slack.PostMessageParameters{
 				AsUser: true,
 			}

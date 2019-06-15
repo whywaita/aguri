@@ -1,4 +1,4 @@
-module github.com/whywaita/slack-aggregator
+module github.com/whywaita/aguri
 
 require (
 	github.com/BurntSushi/toml v0.3.1

@@ -3,20 +3,13 @@ package main
 import (
 	"flag"
 	"log"
-	"regexp"
 	"runtime"
 
 	"github.com/nlopes/slack"
-	"github.com/whywaita/slack-aggregator/config"
-)
-
-const (
-	PrefixSlackChannel = "aggr-"
-)
-
-var (
-	reChannel = regexp.MustCompile(`(\S+)@(\S+):(\S+)`)
-	wtc       = map[string]string{} // "workspace,timestamp" : channel
+	"github.com/whywaita/aguri/aggregate"
+	"github.com/whywaita/aguri/config"
+	"github.com/whywaita/aguri/reply"
+	"github.com/whywaita/aguri/store"
 )
 
 func main() {
@@ -30,15 +23,15 @@ func main() {
 	cpus := runtime.NumCPU()
 	runtime.GOMAXPROCS(cpus)
 
-	toToken, froms, err := config.LoadConfig(*configPath)
+	err := config.LoadConfig(*configPath)
 	if err != nil {
 		log.Fatalln("[ERROR] ", err)
 	}
 
-	toAPI := slack.New(toToken)
-	go replyMessage(toAPI, froms)
+	toAPI := slack.New(store.GetConfigToAPI())
+	go reply.HandleReplyMessage(toAPI)
 
-	err = catchMessage(froms, toAPI)
+	err = aggregate.StartCatchMessage(toAPI)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -4,6 +4,11 @@ import (
 	"log"
 
 	"github.com/BurntSushi/toml"
+	"github.com/whywaita/aguri/store"
+)
+
+const (
+	PrefixSlackChannel = "aggr-"
 )
 
 type Config struct {
@@ -21,10 +26,8 @@ type From struct {
 	Token string `toml:"token"`
 }
 
-func LoadConfig(configPath string) (string, map[string]string, error) {
+func LoadConfig(configPath string) error {
 	var tomlConfig Config
-
-	var toToken string
 	var err error
 	froms := map[string]string{}
 
@@ -32,14 +35,15 @@ func LoadConfig(configPath string) (string, map[string]string, error) {
 	_, err = toml.DecodeFile(configPath, &tomlConfig)
 	if err != nil {
 		log.Println("[ERROR] loadConfig is fail", err)
-		return "", nil, err
+		return err
 	}
 
-	toToken = tomlConfig.To.Token
+	store.SetConfigToAPI(tomlConfig.To.Token)
 
 	for name, data := range tomlConfig.From {
 		froms[name] = data.Token
 	}
+	store.SetConfigFroms(froms)
 
-	return toToken, froms, err
+	return err
 }
