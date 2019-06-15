@@ -21,7 +21,7 @@ func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace
 
 		switch ev.SubType {
 		case "message_changed":
-			fmt.Println(ev)
+			err = HandleMessageEdited(ev, fromAPI, workspace, toChannelName)
 		case "message_deleted":
 			err = HandleMessageDeleted(ev, fromAPI, workspace, toChannelName)
 			if err != nil {
@@ -46,7 +46,24 @@ func HandleMessageDeleted(ev *slack.MessageEvent, fromAPI *slack.Client, workspa
 		return err
 	}
 
-	msg := fmt.Sprintf("Message Deleted!\nOriginal Text:\n%v", d.Body)
+	msg := fmt.Sprintf("Original Text:\n%v", d.Body)
+
+	err = utils.PostMessageToChannel(store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func HandleMessageEdited(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, toChannelName string) error {
+	d, err := store.GetSlackLog(workspace, ev.SubMessage.Timestamp)
+	if err != nil {
+		return err
+	}
+
+	msg := fmt.Sprintf("Original Text:\n%v", d.Body)
+	msg += "\n\nEdited Text\n" + ev.SubMessage.Text
 
 	err = utils.PostMessageToChannel(store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
 	if err != nil {
