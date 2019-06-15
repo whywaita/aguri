@@ -21,7 +21,7 @@ jobs:
             - /go/pkg/mod/cache
       - run:
           name: build
-          command: go build . -o /aguri
+          command: go build .
 
   deploy:
     docker: *docker
