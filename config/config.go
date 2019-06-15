@@ -38,7 +38,7 @@ func LoadConfig(configPath string) error {
 		return err
 	}
 
-	store.SetConfigToAPI(tomlConfig.To.Token)
+	store.SetConfigToAPIToken(tomlConfig.To.Token)
 
 	for name, data := range tomlConfig.From {
 		froms[name] = data.Token

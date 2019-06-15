@@ -25,6 +25,7 @@ func GetSourceChannelName(workspace, timestamp string) (string, error) {
 	parent := strings.Join([]string{workspace, timestamp}, ",")
 	val, ok := wtc[parent]
 	if ok == false {
+		// TODO: if can't get channel name, search old message using slack API
 		return "", ErrSourceChannelNotFound
 	}
 

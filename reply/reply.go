@@ -59,7 +59,8 @@ func getSlackApiInstance(workspaceName string) *slack.Client {
 	return api
 }
 
-func HandleReplyMessage(toAPI *slack.Client) {
+func HandleReplyMessage() {
+	toAPI := store.GetConfigToAPI()
 	rtm := toAPI.NewRTM()
 	go rtm.ManageConnection()
 	for msg := range rtm.IncomingEvents {
@@ -99,7 +100,6 @@ func HandleReplyMessage(toAPI *slack.Client) {
 
 			sourceChannelName, err := store.GetSourceChannelName(workspace, ev.ThreadTimestamp)
 			if err != nil {
-				// TODO: if can't get channel name, search old message using slack API
 				log.Println(err)
 			}
 

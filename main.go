@@ -5,11 +5,9 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/nlopes/slack"
 	"github.com/whywaita/aguri/aggregate"
 	"github.com/whywaita/aguri/config"
 	"github.com/whywaita/aguri/reply"
-	"github.com/whywaita/aguri/store"
 )
 
 func main() {
@@ -28,10 +26,9 @@ func main() {
 		log.Fatalln("[ERROR] ", err)
 	}
 
-	toAPI := slack.New(store.GetConfigToAPI())
-	go reply.HandleReplyMessage(toAPI)
+	go reply.HandleReplyMessage()
 
-	err = aggregate.StartCatchMessage(toAPI)
+	err = aggregate.StartCatchMessage()
 	if err != nil {
 		log.Fatal(err)
 	}

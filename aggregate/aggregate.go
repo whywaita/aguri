@@ -2,19 +2,14 @@ package aggregate
 
 import (
 	"fmt"
-	"log"
-	"strings"
 	"sync"
 
 	"github.com/nlopes/slack"
-	"github.com/whywaita/aguri/config"
 	"github.com/whywaita/aguri/store"
-	"github.com/whywaita/aguri/utils"
 )
 
-func handleCatchMessagePerWorkspace(workspace, token string, toAPI *slack.Client) {
+func handleCatchMessagePerWorkspace(workspaceName, token string) {
 	var lastTimestamp string
-	var err error
 	var info *slack.Info
 
 	fromAPI := slack.New(token)
@@ -28,15 +23,7 @@ func handleCatchMessagePerWorkspace(workspace, token string, toAPI *slack.Client
 			info = ev.Info
 		case *slack.MessageEvent:
 			// fmt.Printf("Message: %v\n", ev)
-
-			if lastTimestamp != ev.Timestamp {
-				chName := config.PrefixSlackChannel + strings.ToLower(workspace)
-
-				lastTimestamp, err = utils.PostMessageToChannel(toAPI, fromAPI, ev, info, chName)
-				if err != nil {
-					log.Println(err)
-				}
-			}
+			lastTimestamp = HandleMessageEvent(ev, info, fromAPI, workspaceName, lastTimestamp)
 		case *slack.RTMError:
 			fmt.Printf("Error: %s\n", ev.Error())
 		default:
@@ -45,7 +32,7 @@ func handleCatchMessagePerWorkspace(workspace, token string, toAPI *slack.Client
 	}
 }
 
-func StartCatchMessage(toAPI *slack.Client) error {
+func StartCatchMessage() error {
 	var wg sync.WaitGroup
 
 	froms := store.GetConfigFromAPITokens()
@@ -55,7 +42,7 @@ func StartCatchMessage(toAPI *slack.Client) error {
 		fromToken := token
 		fromTeam := team
 		go func() {
-			handleCatchMessagePerWorkspace(fromTeam, fromToken, toAPI)
+			handleCatchMessagePerWorkspace(fromTeam, fromToken)
 			wg.Done()
 		}()
 	}
