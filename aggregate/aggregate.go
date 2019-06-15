@@ -10,24 +10,25 @@ import (
 
 func handleCatchMessagePerWorkspace(workspaceName, token string) {
 	var lastTimestamp string
-	var info *slack.Info
 
 	fromAPI := slack.New(token)
 	rtm := fromAPI.NewRTM()
 	go rtm.ManageConnection()
 	for msg := range rtm.IncomingEvents {
 		switch ev := msg.Data.(type) {
-		case *slack.HelloEvent:
-		// Ignore Hello
 		case *slack.ConnectedEvent:
-			info = ev.Info
+			// info = ev.Info
 		case *slack.MessageEvent:
-			// fmt.Printf("Message: %v\n", ev)
-			lastTimestamp = HandleMessageEvent(ev, info, fromAPI, workspaceName, lastTimestamp)
+			lastTimestamp = HandleMessageEvent(ev, fromAPI, workspaceName, lastTimestamp)
 		case *slack.RTMError:
-			fmt.Printf("Error: %s\n", ev.Error())
+			fmt.Printf("RTM Error: %s\n", ev.Error())
+		case *slack.FilePublicEvent:
+			// not implement events
+			fmt.Printf("Not Implement Event Type: %v, Data: %v\n", msg.Type, msg.Data)
+		case *slack.HelloEvent, *slack.ConnectingEvent, *slack.LatencyReport, *slack.UserTypingEvent, *slack.ChannelMarkedEvent:
+			// ignore events
 		default:
-			// Ignore
+			fmt.Printf("Unexpected Event Type: %v, Data: %v\n", msg.Type, msg.Data)
 		}
 	}
 }
