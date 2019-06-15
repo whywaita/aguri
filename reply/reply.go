@@ -92,13 +92,17 @@ func HandleReplyMessage() {
 					break
 				}
 
+				if len(userNames[0]) < 3 {
+					log.Printf("can't get source channel name: %v", userNames[0])
+					break
+				}
 				chName := userNames[0][3]
-				store.SetSourceChannelName(workspace, ev.Timestamp, chName)
+				store.SetSlackLog(workspace, ev.Timestamp, chName, ev.Text)
 
 				break
 			}
 
-			sourceChannelName, err := store.GetSourceChannelName(workspace, ev.ThreadTimestamp)
+			logData, err := store.GetSlackLog(workspace, ev.ThreadTimestamp)
 			if err != nil {
 				log.Println(err)
 			}
@@ -109,7 +113,7 @@ func HandleReplyMessage() {
 				AsUser: true,
 			}
 
-			_, _, err = api.PostMessage(sourceChannelName, slack.MsgOptionText(ev.Text, false), slack.MsgOptionPostMessageParameters(param))
+			_, _, err = api.PostMessage(logData.Channel, slack.MsgOptionText(ev.Text, false), slack.MsgOptionPostMessageParameters(param))
 			if err != nil {
 				log.Println(err)
 				break
