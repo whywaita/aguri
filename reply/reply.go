@@ -105,6 +105,7 @@ func HandleReplyMessage() {
 			logData, err := store.GetSlackLog(workspace, ev.ThreadTimestamp)
 			if err != nil {
 				log.Println(err)
+				break
 			}
 
 			// Post

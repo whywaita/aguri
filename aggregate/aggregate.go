@@ -25,7 +25,7 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 		case *slack.FilePublicEvent:
 			// not implement events
 			fmt.Printf("Not Implement Event Type: %v, Data: %v\n", msg.Type, msg.Data)
-		case *slack.HelloEvent, *slack.ConnectingEvent, *slack.LatencyReport, *slack.UserTypingEvent, *slack.ChannelMarkedEvent:
+		case *slack.HelloEvent, *slack.ConnectingEvent, *slack.LatencyReport, *slack.UserTypingEvent, *slack.ChannelMarkedEvent, *slack.IMMarkedEvent:
 			// ignore events
 		default:
 			fmt.Printf("Unexpected Event Type: %v, Data: %v\n", msg.Type, msg.Data)
