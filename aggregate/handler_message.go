@@ -5,6 +5,8 @@ import (
 	"log"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/whywaita/aguri/store"
 
 	"github.com/nlopes/slack"
@@ -43,14 +45,14 @@ func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace
 func HandleMessageDeleted(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, toChannelName string) error {
 	d, err := store.GetSlackLog(workspace, ev.DeletedTimestamp)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get slack log from memory")
 	}
 
 	msg := fmt.Sprintf("Original Text:\n%v", d.Body)
 
 	err = utils.PostMessageToChannel(store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to post message")
 	}
 
 	return nil
@@ -59,7 +61,7 @@ func HandleMessageDeleted(ev *slack.MessageEvent, fromAPI *slack.Client, workspa
 func HandleMessageEdited(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, toChannelName string) error {
 	d, err := store.GetSlackLog(workspace, ev.SubMessage.Timestamp)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get slack log from memory")
 	}
 
 	msg := fmt.Sprintf("Original Text:\n%v", d.Body)
@@ -67,7 +69,7 @@ func HandleMessageEdited(ev *slack.MessageEvent, fromAPI *slack.Client, workspac
 
 	err = utils.PostMessageToChannel(store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to post message")
 	}
 
 	store.SetSlackLog(workspace, ev.SubMessage.Timestamp, d.Channel, ev.SubMessage.Text)

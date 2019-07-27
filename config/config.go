@@ -1,7 +1,9 @@
 package config
 
 import (
-	"log"
+	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/BurntSushi/toml"
 	"github.com/whywaita/aguri/store"
@@ -34,8 +36,7 @@ func LoadConfig(configPath string) error {
 	// load comfig file
 	_, err = toml.DecodeFile(configPath, &tomlConfig)
 	if err != nil {
-		log.Println("[ERROR] loadConfig is fail", err)
-		return err
+		return errors.Wrap(err, fmt.Sprintf("failed to load config from %s", configPath))
 	}
 
 	store.SetConfigToAPIToken(tomlConfig.To.Token)
@@ -45,5 +46,5 @@ func LoadConfig(configPath string) error {
 	}
 	store.SetConfigFroms(froms)
 
-	return err
+	return nil
 }
