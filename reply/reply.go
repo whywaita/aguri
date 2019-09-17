@@ -98,7 +98,7 @@ func HandleReplyMessage() {
 					break
 				}
 				chName := userNames[0][3]
-				store.SetSlackLog(workspace, ev.Timestamp, chName, ev.Text)
+				store.SetSlackLog(workspace, ev.Timestamp, chName, ev.Text, "", "")
 
 				break
 			}

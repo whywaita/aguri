@@ -136,13 +136,13 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	// convert user id to user name in message
 	msg = ConvertUserIdtoName(msg, ev, fromAPI)
 	if msg != "" {
-		_, _, err := toAPI.PostMessage(aggrChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
+		respChannel, respTimestamp, err := toAPI.PostMessage(aggrChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
 		if err != nil {
 			return errors.Wrap(err, "failed to post message")
 		}
 
 		workspace := strings.TrimPrefix(aggrChannelName, config.PrefixSlackChannel)
-		store.SetSlackLog(workspace, ev.Timestamp, position, msg)
+		store.SetSlackLog(workspace, ev.Timestamp, position, msg, respChannel, respTimestamp)
 	}
 
 	if attachments != nil {

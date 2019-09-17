@@ -2,7 +2,6 @@ package aggregate
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/sirupsen/logrus"
 
@@ -22,16 +21,25 @@ func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace
 
 		switch ev.SubType {
 		case "message_changed":
+			if ev.Msg.Text == "" {
+				// message_changed and Text is null = URL link expand
+				err = HandleMessageLinkExpand(ev, fromAPI, workspace, toChannelName)
+				if err != nil {
+					logger.Warn(err)
+				}
+				break
+			}
+
 			err = HandleMessageEdited(ev, fromAPI, workspace, toChannelName)
 		case "message_deleted":
 			err = HandleMessageDeleted(ev, fromAPI, workspace, toChannelName)
 			if err != nil {
-				log.Println(err)
+				logger.Warn(err)
 			}
 		default:
 			err = utils.PostMessageToChannel(store.GetConfigToAPI(), fromAPI, ev, ev.Text, toChannelName)
 			if err != nil {
-				log.Println(err)
+				logger.Warn(err)
 			}
 		}
 
@@ -63,15 +71,28 @@ func HandleMessageEdited(ev *slack.MessageEvent, fromAPI *slack.Client, workspac
 		return errors.Wrap(err, "failed to get slack log from memory")
 	}
 
-	msg := fmt.Sprintf("Original Text:\n%v", d.Body)
-	msg += "\n\nEdited Text\n" + ev.SubMessage.Text
+	msg := fmt.Sprintf("Edited From:\n%v", d.Body)
+	msg += "\n\nEdited To:\n" + ev.SubMessage.Text
 
 	err = utils.PostMessageToChannel(store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
 	if err != nil {
 		return errors.Wrap(err, "failed to post message")
 	}
 
-	store.SetSlackLog(workspace, ev.SubMessage.Timestamp, d.Channel, ev.SubMessage.Text)
+	// store.SetSlackLog(workspace, ev.SubMessage.Timestamp, d.Channel, ev.SubMessage.Text)
 
 	return nil
+}
+
+func HandleMessageLinkExpand(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, toChannelName string) error {
+	d, err := store.GetSlackLog(workspace, ev.SubMessage.Timestamp)
+	if err != nil {
+		return errors.Wrap(err, "failed to get slack log from memory")
+	}
+
+	_, _, _, err = store.GetConfigToAPI().UpdateMessage(d.ToAPICID, d.ToAPITS,
+		slack.MsgOptionUpdate(d.ToAPITS),
+		slack.MsgOptionAttachments(ev.SubMessage.Attachments[0]),
+	)
+	return err
 }
