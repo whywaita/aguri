@@ -97,6 +97,7 @@ func HandleMessageLinkExpand(ev *slack.MessageEvent, fromAPI *slack.Client, work
 		logger.Debugf("Detect Link Expand, but Attachment is too many: %v", ev.SubMessage.Attachments)
 	}
 	_, _, _, err = store.GetConfigToAPI().UpdateMessage(d.ToAPICID, d.ToAPITS,
+		slack.MsgOptionText(d.Body, false),
 		slack.MsgOptionUpdate(d.ToAPITS),
 		slack.MsgOptionAttachments(ev.SubMessage.Attachments[0]),
 	)
