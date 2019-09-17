@@ -1,8 +1,9 @@
 package store
 
 import (
-	"errors"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 var (
@@ -34,7 +35,7 @@ func GetSlackLog(workspace, timestamp string) (*LogData, error) {
 	val, ok := log[parent]
 	if ok == false {
 		// TODO: if can't get channel name, search old message using slack API
-		return nil, ErrSourceChannelNotFound
+		return nil, errors.Wrap(ErrSourceChannelNotFound, "")
 	}
 
 	return &val, nil

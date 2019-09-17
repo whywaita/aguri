@@ -1,6 +1,8 @@
 package store
 
-import "github.com/nlopes/slack"
+import (
+	"github.com/nlopes/slack"
+)
 
 var (
 	fromAPIs   map[string]string
@@ -23,6 +25,10 @@ func GetConfigFromAPITokens() map[string]string {
 
 func GetConfigFromAPI(workspaceName string) (token string) {
 	return fromAPIs[workspaceName]
+}
+
+func GetConfigToAPIToken() string {
+	return toAPIToken
 }
 
 func GetConfigToAPI() *slack.Client {
