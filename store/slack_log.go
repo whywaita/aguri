@@ -11,22 +11,26 @@ var (
 )
 
 type LogData struct {
-	Channel string
-	Body    string
+	Channel  string
+	Body     string
+	ToAPICID string
+	ToAPITS  string
 }
 
 var (
 	ErrSourceChannelNotFound = errors.New("source channel is not found")
 )
 
-func SetSlackLog(workspace, timestamp, channelName, text string) {
+func SetSlackLog(workspace, timestamp, channelName, text, toAPIChannelID, toAPITimestamp string) {
 	// register post to kv
 	k := strings.Join([]string{workspace, timestamp}, ",")
 
 	// TODO: gc
 	log[k] = LogData{
-		Channel: channelName,
-		Body:    text,
+		Channel:  channelName,
+		Body:     text,
+		ToAPICID: toAPIChannelID,
+		ToAPITS:  toAPITimestamp,
 	}
 }
 
