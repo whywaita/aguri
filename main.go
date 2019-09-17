@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"log"
-	"runtime"
+	"os"
 
+	"github.com/sirupsen/logrus"
 	"github.com/whywaita/aguri/aggregate"
 	"github.com/whywaita/aguri/config"
 	"github.com/whywaita/aguri/reply"
@@ -16,10 +17,7 @@ func main() {
 	flag.Parse()
 
 	// initialize
-	//logger := log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)
-	//slack.SetLogger(logger)
-	cpus := runtime.NumCPU()
-	runtime.GOMAXPROCS(cpus)
+	logrus.SetOutput(os.Stderr)
 
 	err := config.LoadConfig(*configPath)
 	if err != nil {

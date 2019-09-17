@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -47,4 +48,8 @@ func LoadConfig(configPath string) error {
 	store.SetConfigFroms(froms)
 
 	return nil
+}
+
+func GetToChannelName(workspaceName string) string {
+	return PrefixSlackChannel + strings.ToLower(workspaceName)
 }

@@ -1,15 +1,28 @@
 package aggregate
 
 import (
-	"fmt"
 	"sync"
+
+	"github.com/whywaita/aguri/config"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/nlopes/slack"
 	"github.com/whywaita/aguri/store"
+	"github.com/whywaita/slackrus"
 )
 
 func handleCatchMessagePerWorkspace(workspaceName, token string) {
 	var lastTimestamp string
+
+	logger := logrus.New()
+	logger.AddHook(&slackrus.SlackrusHook{
+		LegacyToken:    store.GetConfigToAPIToken(),
+		AcceptedLevels: slackrus.LevelThreshold(logrus.WarnLevel),
+		IconEmoji:      ":ghost:",
+		Username:       "aguri",
+		Channel:        config.GetToChannelName(workspaceName),
+	})
 
 	fromAPI := slack.New(token)
 	rtm := fromAPI.NewRTM()
@@ -19,16 +32,16 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 		case *slack.ConnectedEvent:
 			// info = ev.Info
 		case *slack.MessageEvent:
-			lastTimestamp = HandleMessageEvent(ev, fromAPI, workspaceName, lastTimestamp)
+			lastTimestamp = HandleMessageEvent(ev, fromAPI, workspaceName, lastTimestamp, logger)
 		case *slack.RTMError:
-			fmt.Printf("RTM Error: %s\n", ev.Error())
+			logger.Infof("RTM Error: %s\n", ev.Error())
 		case *slack.FilePublicEvent:
 			// not implement events
-			fmt.Printf("Not Implement Event Type: %v, Data: %v\n", msg.Type, msg.Data)
+			logger.Debugf("Not Implement Event Type: %v, Data: %v\n", msg.Type, msg.Data)
 		case *slack.HelloEvent, *slack.ConnectingEvent, *slack.LatencyReport, *slack.UserTypingEvent, *slack.ChannelMarkedEvent, *slack.IMMarkedEvent:
 			// ignore events
 		default:
-			fmt.Printf("Unexpected Event Type: %v, Data: %v\n", msg.Type, msg.Data)
+			logger.Warnf("Unexpected Event Type: %v, Data: %v\n", msg.Type, msg.Data)
 		}
 	}
 }

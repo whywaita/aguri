@@ -63,6 +63,7 @@ func HandleReplyMessage() {
 	toAPI := store.GetConfigToAPI()
 	rtm := toAPI.NewRTM()
 	go rtm.ManageConnection()
+
 	for msg := range rtm.IncomingEvents {
 		switch ev := msg.Data.(type) {
 		case *slack.MessageEvent:

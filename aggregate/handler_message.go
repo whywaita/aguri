@@ -3,23 +3,22 @@ package aggregate
 import (
 	"fmt"
 	"log"
-	"strings"
 
-	"github.com/pkg/errors"
-
-	"github.com/whywaita/aguri/store"
+	"github.com/sirupsen/logrus"
 
 	"github.com/nlopes/slack"
+	"github.com/pkg/errors"
 	"github.com/whywaita/aguri/config"
+	"github.com/whywaita/aguri/store"
 	"github.com/whywaita/aguri/utils"
 )
 
-func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, lastTimestamp string) string {
+func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, lastTimestamp string, logger *logrus.Logger) string {
 	var err error
 
 	if lastTimestamp != ev.Timestamp {
 		// if lastTimestamp == eve.Timestamp, that message is same.
-		toChannelName := config.PrefixSlackChannel + strings.ToLower(workspace)
+		toChannelName := config.GetToChannelName(workspace)
 
 		switch ev.SubType {
 		case "message_changed":
