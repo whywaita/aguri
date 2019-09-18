@@ -35,10 +35,18 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 			lastTimestamp = HandleMessageEvent(ev, fromAPI, workspaceName, lastTimestamp, logger)
 		case *slack.RTMError:
 			logger.Infof("RTM Error: %s\n", ev.Error())
-		case *slack.FilePublicEvent:
+		case *slack.FilePublicEvent,
+			*slack.ReactionAddedEvent:
 			// not implement events
 			logger.Debugf("Not Implement Event Type: %v, Data: %v\n", msg.Type, msg.Data)
-		case *slack.HelloEvent, *slack.ConnectingEvent, *slack.LatencyReport, *slack.UserTypingEvent, *slack.ChannelMarkedEvent, *slack.IMMarkedEvent:
+		case *slack.HelloEvent,
+			*slack.ConnectingEvent,
+			*slack.LatencyReport,
+			*slack.UserTypingEvent,
+			*slack.ChannelMarkedEvent,
+			*slack.IMMarkedEvent,
+			*slack.IncomingEventError,
+			*slack.DisconnectedEvent:
 			// ignore events
 		default:
 			logger.Warnf("Unexpected Event Type: %v, Data: %v\n", msg.Type, msg.Data)
