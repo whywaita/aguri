@@ -24,6 +24,8 @@ jobs:
           GO111MODULE: on
           GOPATH: /home/runner/work/
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOPROXY=direct
+          GOSUMDB=off
         run: |
           export CREATE_EVENT_REF_TYPE=$(jq --raw-output .ref_type "$GITHUB_EVENT_PATH")
           export TAGNAME=$(jq --raw-output .ref "$GITHUB_EVENT_PATH")
