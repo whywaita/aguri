@@ -1,0 +1,40 @@
+name: release
+on:
+  create:
+    tags:
+      - v*.*.*
+
+jobs:
+  release:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Set up Go 1.13
+        uses: actions/setup-go@v1
+        with:
+          version: 1.13
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@master
+
+      - name: Build
+        env:
+          GO111MODULE: on
+          GOPATH: /home/runner/work/
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          export CREATE_EVENT_REF_TYPE=$(jq --raw-output .ref_type "$GITHUB_EVENT_PATH")
+          export TAGNAME=$(jq --raw-output .ref "$GITHUB_EVENT_PATH")
+          echo "========================================================="
+          echo "DEBUG:" $TAGNAME $CREATE_EVENT_REF_TYPE
+          echo "========================================================="
+          if [ "$CREATE_EVENT_REF_TYPE" != "tag" ]; then echo "ref_type is not a tag: ${CREATE_EVENT_REF_TYPE}" && exit 2; fi
+          make cross
+          echo "========================================================="
+          echo "DEBUG: ls pkg/"
+          ls pkg/
+          echo "========================================================="
+          go get -u github.com/tcnksm/ghr
+          $GOPATH/bin/ghr -n ${TAGNAME} -b "Release ${TAGNAME}" -draft ${TAGNAME} pkg/
