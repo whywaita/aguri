@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	"github.com/whywaita/aguri/aggregate"
@@ -14,6 +15,11 @@ import (
 func main() {
 	// parse args
 	var configPath = flag.String("config", "config.toml", "config file path")
+	flag.VisitAll(func(f *flag.Flag) {
+		if s := os.Getenv(strings.ToUpper(f.Name)); s != "" {
+			f.Value.Set(s)
+		}
+	})
 	flag.Parse()
 
 	// initialize

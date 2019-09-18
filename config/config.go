@@ -2,11 +2,15 @@ package config
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"strings"
+
+	"github.com/BurntSushi/toml"
 
 	"github.com/pkg/errors"
 
-	"github.com/BurntSushi/toml"
 	"github.com/whywaita/aguri/store"
 )
 
@@ -34,10 +38,12 @@ func LoadConfig(configPath string) error {
 	var err error
 	froms := map[string]string{}
 
-	// load comfig file
-	_, err = toml.DecodeFile(configPath, &tomlConfig)
+	b, err := fetch(configPath)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed to load config from %s", configPath))
+	}
+	if err := toml.Unmarshal(b, &tomlConfig); err != nil {
+		return errors.Wrap(err, "failed to unmarshal toml config")
 	}
 
 	store.SetConfigToAPIToken(tomlConfig.To.Token)
@@ -48,6 +54,30 @@ func LoadConfig(configPath string) error {
 	store.SetConfigFroms(froms)
 
 	return nil
+}
+
+func fetch(configPath string) ([]byte, error) {
+	u, err := url.Parse(configPath)
+	if err != nil {
+		// this is file path!
+		return ioutil.ReadFile(configPath)
+	}
+	switch u.Scheme {
+	case "http", "https":
+		return fetchHTTP(u)
+	default:
+		return ioutil.ReadFile(u.Path)
+
+	}
+}
+
+func fetchHTTP(u *url.URL) ([]byte, error) {
+	resp, err := http.Get(u.String())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get config via HTTP(S)")
+	}
+	defer resp.Body.Close()
+	return ioutil.ReadAll(resp.Body)
 }
 
 func GetToChannelName(workspaceName string) string {
