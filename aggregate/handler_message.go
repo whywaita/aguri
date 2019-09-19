@@ -92,14 +92,12 @@ func HandleMessageLinkExpand(ev *slack.MessageEvent, fromAPI *slack.Client, work
 
 	switch {
 	case len(ev.SubMessage.Attachments) == 0:
-		return errors.New("Detect Link Expand, but Attachment is not found")
-	case len(ev.SubMessage.Attachments) > 2:
-		logger.Debugf("Detect Link Expand, but Attachment is too many: %v", ev.SubMessage.Attachments)
+		return errors.New(fmt.Sprintf("Detect Link Expand, but Attachment is not found: %+v", ev))
 	}
 	_, _, _, err = store.GetConfigToAPI().UpdateMessage(d.ToAPICID, d.ToAPITS,
 		slack.MsgOptionText(d.Body, false),
 		slack.MsgOptionUpdate(d.ToAPITS),
-		slack.MsgOptionAttachments(ev.SubMessage.Attachments[0]),
+		slack.MsgOptionAttachments(ev.SubMessage.Attachments...),
 	)
 	return err
 }

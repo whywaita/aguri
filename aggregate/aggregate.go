@@ -1,6 +1,7 @@
 package aggregate
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/whywaita/aguri/config"
@@ -36,7 +37,8 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 		case *slack.RTMError:
 			logger.Infof("RTM Error: %s\n", ev.Error())
 		case *slack.FilePublicEvent,
-			*slack.ReactionAddedEvent:
+			*slack.ReactionAddedEvent,
+			*slack.ReactionRemovedEvent:
 			// not implement events
 			logger.Debugf("Not Implement Event Type: %v, Data: %v\n", msg.Type, msg.Data)
 		case *slack.HelloEvent,
@@ -48,6 +50,11 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 			*slack.IncomingEventError,
 			*slack.DisconnectedEvent:
 			// ignore events
+		case *slack.ConnectionErrorEvent:
+			if strings.Contains(msg.Data.(string), "slack rate limit exceeded") {
+				// rate limit is ignore
+			}
+			logger.Warnf("Unexpected Event Type: %v, Data: %v\n", msg.Type, msg.Data)
 		default:
 			logger.Warnf("Unexpected Event Type: %v, Data: %v\n", msg.Type, msg.Data)
 		}

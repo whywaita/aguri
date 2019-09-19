@@ -1,0 +1,25 @@
+name: test
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Go 1.13
+        uses: actions/setup-go@v1
+        with:
+          version: 1.13
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@master
+
+      - name: Running go tests
+        env:
+          GO111MODULE: on
+        run: make test
