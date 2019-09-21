@@ -8,6 +8,7 @@ require (
 	github.com/nlopes/slack v0.6.0
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.4.2
+	github.com/spf13/cast v1.3.0 // indirect
 	github.com/whywaita/slack_lib v0.0.0-20181101084338-ab9413794b38
 	github.com/whywaita/slackrus v0.1.0
 )

@@ -4,6 +4,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/spf13/cast"
+
 	"github.com/whywaita/aguri/config"
 
 	"github.com/sirupsen/logrus"
@@ -40,7 +42,7 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 			*slack.ReactionAddedEvent,
 			*slack.ReactionRemovedEvent:
 			// not implement events
-			logger.Debugf("Not Implement Event Type: %v, Data: %v\n", msg.Type, msg.Data)
+			logger.Debugf("Not Implement Event Type: %v, Data: %+v\n", msg.Type, msg.Data)
 		case *slack.HelloEvent,
 			*slack.ConnectingEvent,
 			*slack.LatencyReport,
@@ -51,12 +53,12 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 			*slack.DisconnectedEvent:
 			// ignore events
 		case *slack.ConnectionErrorEvent:
-			if strings.Contains(msg.Data.(string), "slack rate limit exceeded") {
+			if strings.Contains(cast.ToString(msg.Data), "slack rate limit exceeded") {
 				// rate limit is ignore
 			}
-			logger.Warnf("Unexpected Event Type: %v, Data: %v\n", msg.Type, msg.Data)
+			logger.Warnf("Unexpected Event Type: %v, Data: %+v\n", msg.Type, msg.Data)
 		default:
-			logger.Warnf("Unexpected Event Type: %v, Data: %v\n", msg.Type, msg.Data)
+			logger.Warnf("Unexpected Event Type: %v, Data: %+v\n", msg.Type, msg.Data)
 		}
 	}
 }
