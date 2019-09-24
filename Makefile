@@ -16,6 +16,10 @@ test:  ## Run the tests.
 build: main.go  ## Build a binary.
 	$(GO) build -ldflags "$(LDFLAGS)"
 
+.PHONY: linux
+linux: main.go  ## Build a binary for linux.
+	GOOS=linux GOARCH=amd64 make build
+
 .PHONY: cross
 cross: main.go  ## Build binaries for cross platform.
 	mkdir -p pkg
