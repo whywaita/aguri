@@ -54,7 +54,8 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 			// ignore events
 		case *slack.ConnectionErrorEvent:
 			if strings.Contains(cast.ToString(msg.Data), "slack rate limit exceeded") {
-				// rate limit is ignore
+				// ignore rate limit event
+				break
 			}
 			logger.Warnf("Unexpected Event Type: %v, Data: %+v\n", msg.Type, msg.Data)
 		default:
