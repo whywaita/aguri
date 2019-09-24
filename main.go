@@ -12,6 +12,11 @@ import (
 	"github.com/whywaita/aguri/reply"
 )
 
+var (
+	version  string
+	revision string
+)
+
 func main() {
 	// parse args
 	var configPath = flag.String("config", "config.toml", "config file path")
@@ -30,6 +35,7 @@ func main() {
 		log.Fatalln("[ERROR] ", err)
 	}
 
+	log.Printf("aguri start! version: %v, revision: %v￿\n", version, revision)
 	go reply.HandleReplyMessage()
 
 	err = aggregate.StartCatchMessage()
