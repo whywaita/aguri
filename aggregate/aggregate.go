@@ -26,6 +26,7 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 		Username:       "aguri",
 		Channel:        config.GetToChannelName(workspaceName),
 	})
+	logger.SetLevel(logrus.DebugLevel)
 
 	fromAPI := slack.New(token)
 	rtm := fromAPI.NewRTM()
@@ -49,12 +50,15 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 			*slack.UserTypingEvent,
 			*slack.ChannelMarkedEvent,
 			*slack.IMMarkedEvent,
+			*slack.GroupMarkedEvent,
 			*slack.IncomingEventError,
-			*slack.DisconnectedEvent:
+			*slack.DisconnectedEvent,
+			*slack.UserChangeEvent:
 			// ignore events
 		case *slack.ConnectionErrorEvent:
 			if strings.Contains(cast.ToString(msg.Data), "slack rate limit exceeded") {
-				// rate limit is ignore
+				// ignore rate limit event
+				break
 			}
 			logger.Warnf("Unexpected Event Type: %v, Data: %+v\n", msg.Type, msg.Data)
 		default:
