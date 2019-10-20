@@ -1,6 +1,7 @@
 package reply
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -81,44 +82,16 @@ func HandleReplyMessage() {
 
 			if ev.ThreadTimestamp == "" {
 				// maybe not in thread
-				if ev.Username == "" {
-					break
+				err := HandleReplyNotInThreadMessage(ev, workspace)
+				if err != nil {
+					log.Println(err)
 				}
-
-				// parse username
-				userNames := reChannel.FindAllStringSubmatch(ev.Username, -1)
-				if !validateParsedMessage(userNames) {
-					// miss regexp
-					// or not channel
-					break
-				}
-
-				if len(userNames[0]) < 3 {
-					log.Printf("can't get source channel name: %v", userNames[0])
-					break
-				}
-				chName := userNames[0][3]
-				store.SetSlackLog(workspace, ev.Timestamp, chName, ev.Text, "", "")
-
 				break
 			}
 
-			logData, err := store.GetSlackLog(workspace, ev.ThreadTimestamp)
+			err = HandleReplyInThreadMessage(ev, workspace)
 			if err != nil {
 				log.Println(err)
-				break
-			}
-
-			// Post
-			api := getSlackApiInstance(workspace)
-			param := slack.PostMessageParameters{
-				AsUser: true,
-			}
-
-			_, _, err = api.PostMessage(logData.Channel, slack.MsgOptionText(ev.Text, false), slack.MsgOptionPostMessageParameters(param))
-			if err != nil {
-				log.Println(err)
-				break
 			}
 
 		case *slack.RTMError:
@@ -129,4 +102,46 @@ func HandleReplyMessage() {
 		}
 
 	}
+}
+
+func HandleReplyInThreadMessage(ev *slack.MessageEvent, workspace string) error {
+	logData, err := store.GetSlackLog(workspace, ev.ThreadTimestamp)
+	if err != nil {
+		return err
+	}
+
+	// Post
+	api := getSlackApiInstance(workspace)
+	param := slack.PostMessageParameters{
+		AsUser: true,
+	}
+
+	_, _, err = api.PostMessage(logData.Channel, slack.MsgOptionText(ev.Text, false), slack.MsgOptionPostMessageParameters(param))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func HandleReplyNotInThreadMessage(ev *slack.MessageEvent, workspace string) error {
+	if ev.Username == "" {
+		return errors.New("Username is not found")
+	}
+
+	// parse username
+	userNames := reChannel.FindAllStringSubmatch(ev.Username, -1)
+	if !validateParsedMessage(userNames) {
+		// miss regexp
+		// or not channel
+		return errors.New("failed to validate message")
+	}
+
+	if len(userNames[0]) < 3 {
+		return fmt.Errorf("failed to get source channel name: %s", userNames[0])
+	}
+	chName := userNames[0][3]
+	store.SetSlackLog(workspace, ev.Timestamp, chName, ev.Text, "", "")
+
+	return nil
 }
