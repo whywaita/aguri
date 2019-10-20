@@ -12,6 +12,10 @@ import (
 	"github.com/whywaita/aguri/utils"
 )
 
+var (
+	ErrAttachmentNotFound = errors.New("Detect Link Expand, but Attachment is not found")
+)
+
 func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, lastTimestamp string, logger *logrus.Logger) string {
 	var err error
 
@@ -21,16 +25,23 @@ func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace
 
 		switch ev.SubType {
 		case "message_changed":
-			if ev.Msg.Text == "" {
-				// message_changed and Text is null = URL link expand
-				err = HandleMessageLinkExpand(ev, fromAPI, workspace, logger)
+			switch {
+			case len(ev.SubMessage.Attachments) == 0:
+				err = HandleMessageEdited(ev, fromAPI, workspace, toChannelName)
 				if err != nil {
 					logger.Warn(err)
+					break
 				}
-				break
+
+			case len(ev.SubMessage.Attachments) >= 1:
+				// message_changed and Text is null = URL link expand
+				err = HandleMessageLinkExpand(ev, fromAPI, workspace, logger)
+				if err != nil && err != ErrAttachmentNotFound {
+					logger.Warn(err)
+					break
+				}
 			}
 
-			err = HandleMessageEdited(ev, fromAPI, workspace, toChannelName)
 		case "message_deleted":
 			err = HandleMessageDeleted(ev, fromAPI, workspace, toChannelName)
 			if err != nil {
@@ -92,7 +103,7 @@ func HandleMessageLinkExpand(ev *slack.MessageEvent, fromAPI *slack.Client, work
 
 	switch {
 	case len(ev.SubMessage.Attachments) == 0:
-		return errors.New(fmt.Sprintf("Detect Link Expand, but Attachment is not found: %+v", ev))
+		return ErrAttachmentNotFound
 	}
 	_, _, _, err = store.GetConfigToAPI().UpdateMessage(d.ToAPICID, d.ToAPITS,
 		slack.MsgOptionText(d.Body, false),
