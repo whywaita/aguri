@@ -15,7 +15,7 @@ import (
 	"github.com/whywaita/slackrus"
 )
 
-func handleCatchMessagePerWorkspace(workspaceName, token string) {
+func handleCatchMessagePerWorkspace(workspaceName, token string, loggerMap *store.SyncLoggerMap) {
 	var lastTimestamp string
 
 	logger := logrus.New()
@@ -27,6 +27,7 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 		Channel:        config.GetToChannelName(workspaceName),
 	})
 	logger.SetLevel(logrus.DebugLevel)
+	loggerMap.Store(workspaceName, logger)
 
 	fromAPI := slack.New(token)
 	rtm := fromAPI.NewRTM()
@@ -57,7 +58,9 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 			*slack.DisconnectedEvent,
 			*slack.UserChangeEvent,
 			*slack.DNDUpdatedEvent,
-			*slack.PrefChangeEvent:
+			*slack.PrefChangeEvent,
+			*slack.ChannelJoinedEvent,
+			*slack.ChannelLeftEvent:
 			// ignore events
 		case *slack.ConnectionErrorEvent:
 			if strings.Contains(cast.ToString(msg.Data), "slack rate limit exceeded") {
@@ -71,7 +74,7 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 	}
 }
 
-func StartCatchMessage() error {
+func StartCatchMessage(loggerMap *store.SyncLoggerMap) error {
 	var wg sync.WaitGroup
 
 	froms := store.GetConfigFromAPITokens()
@@ -81,7 +84,7 @@ func StartCatchMessage() error {
 		fromToken := token
 		fromTeam := team
 		go func() {
-			handleCatchMessagePerWorkspace(fromTeam, fromToken)
+			handleCatchMessagePerWorkspace(fromTeam, fromToken, loggerMap)
 			wg.Done()
 		}()
 	}

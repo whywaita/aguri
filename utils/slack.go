@@ -19,7 +19,7 @@ var (
 	reUser = regexp.MustCompile(`<@U(\S+)>`)
 )
 
-func checkExistChannel(api *slack.Client, searchName string) (bool, error) {
+func CheckExistChannel(api *slack.Client, searchName string) (bool, error) {
 	// channel is exist => True
 	channels, err := api.GetChannels(false)
 	if err != nil {
@@ -106,7 +106,7 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	// post aggregate message
 	var err error
 
-	isExist, err := checkExistChannel(toAPI, aggrChannelName)
+	isExist, err := CheckExistChannel(toAPI, aggrChannelName)
 	if err != nil {
 		return errors.Wrap(err, "failed to get info of exist channel")
 	}

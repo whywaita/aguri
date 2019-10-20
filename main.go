@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/whywaita/aguri/store"
+
 	"github.com/sirupsen/logrus"
 	"github.com/whywaita/aguri/aggregate"
 	"github.com/whywaita/aguri/config"
@@ -36,9 +38,11 @@ func main() {
 	}
 
 	log.Printf("aguri start! version: %v, revision: %v￿\n", version, revision)
-	go reply.HandleReplyMessage()
+	loggerMap := store.NewSyncLoggerMap()
 
-	err = aggregate.StartCatchMessage()
+	go reply.HandleReplyMessage(loggerMap)
+
+	err = aggregate.StartCatchMessage(loggerMap)
 	if err != nil {
 		log.Fatal(err)
 	}

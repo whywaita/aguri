@@ -60,7 +60,7 @@ func getSlackApiInstance(workspaceName string) *slack.Client {
 	return api
 }
 
-func HandleReplyMessage() {
+func HandleReplyMessage(loggerMap *store.SyncLoggerMap) {
 	toAPI := store.GetConfigToAPI()
 	rtm := toAPI.NewRTM()
 	go rtm.ManageConnection()
@@ -82,7 +82,7 @@ func HandleReplyMessage() {
 
 			if ev.ThreadTimestamp == "" {
 				// maybe not in thread
-				err := HandleReplyNotInThreadMessage(ev, workspace)
+				err := HandleReplyNotInThreadMessage(ev, workspace, loggerMap)
 				if err != nil {
 					log.Println(err)
 				}
@@ -105,6 +105,7 @@ func HandleReplyMessage() {
 }
 
 func HandleReplyInThreadMessage(ev *slack.MessageEvent, workspace string) error {
+	// reply message toSlack to fromSlack
 	logData, err := store.GetSlackLog(workspace, ev.ThreadTimestamp)
 	if err != nil {
 		return err
@@ -124,7 +125,16 @@ func HandleReplyInThreadMessage(ev *slack.MessageEvent, workspace string) error 
 	return nil
 }
 
-func HandleReplyNotInThreadMessage(ev *slack.MessageEvent, workspace string) error {
+func HandleReplyNotInThreadMessage(ev *slack.MessageEvent, workspace string, loggerMap *store.SyncLoggerMap) error {
+	if strings.HasPrefix(ev.Text, AguriCommandPrefix) {
+		return HandleAguriCommands(ev.Text, workspace, loggerMap)
+	}
+
+	return saveSlackLogs(ev, workspace)
+}
+
+func saveSlackLogs(ev *slack.MessageEvent, workspace string) error {
+	// save slack log to store package
 	if ev.Username == "" {
 		return errors.New("Username is not found")
 	}
