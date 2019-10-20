@@ -41,7 +41,9 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 			logger.Infof("RTM Error: %s\n", ev.Error())
 		case *slack.FilePublicEvent,
 			*slack.ReactionAddedEvent,
-			*slack.ReactionRemovedEvent:
+			*slack.ReactionRemovedEvent,
+			*slack.MemberJoinedChannelEvent,
+			*slack.MemberLeftChannelEvent:
 			// not implement events
 			logger.Debugf("Not Implement Event Type: %v, Data: %+v\n", msg.Type, msg.Data)
 		case *slack.HelloEvent,
@@ -53,7 +55,9 @@ func handleCatchMessagePerWorkspace(workspaceName, token string) {
 			*slack.GroupMarkedEvent,
 			*slack.IncomingEventError,
 			*slack.DisconnectedEvent,
-			*slack.UserChangeEvent:
+			*slack.UserChangeEvent,
+			*slack.DNDUpdatedEvent,
+			*slack.PrefChangeEvent:
 			// ignore events
 		case *slack.ConnectionErrorEvent:
 			if strings.Contains(cast.ToString(msg.Data), "slack rate limit exceeded") {
