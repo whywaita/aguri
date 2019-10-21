@@ -1,23 +1,19 @@
 package reply
 
 import (
-	"errors"
 	"fmt"
-	"log"
 	"strings"
 
-	"github.com/whywaita/aguri/utils"
-
-	"github.com/nlopes/slack"
-
+	"github.com/pkg/errors"
 	"github.com/whywaita/aguri/store"
+	"github.com/whywaita/aguri/utils"
 )
 
 const (
 	AguriCommandPrefix = `\aguri `
 )
 
-func HandleAguriCommands(text, workspace string, loggerMap *store.SyncLoggerMap) error {
+func HandleAguriCommands(text, workspace string) error {
 	text = strings.TrimPrefix(text, AguriCommandPrefix)
 	texts := strings.Split(text, " ")
 	subcommand := texts[0]
@@ -25,8 +21,7 @@ func HandleAguriCommands(text, workspace string, loggerMap *store.SyncLoggerMap)
 	switch subcommand {
 	case "join":
 		if len(texts) >= 2 {
-			CommandJoin(texts[1], workspace, loggerMap)
-			return nil
+			return CommandJoin(texts[1], workspace)
 		}
 		return errors.New("Usage: \\aguri join <channel name>")
 	default:
@@ -34,26 +29,18 @@ func HandleAguriCommands(text, workspace string, loggerMap *store.SyncLoggerMap)
 	}
 }
 
-func CommandJoin(targetChannelName, workspace string, loggerMap *store.SyncLoggerMap) {
-	token := store.GetConfigFromAPI(workspace)
-	logger, err := loggerMap.Load(workspace)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	api := slack.New(token)
+func CommandJoin(targetChannelName, workspace string) error {
+	api := store.GetSlackApiInstance(workspace)
 	ok, _ := utils.CheckExistChannel(api, targetChannelName)
 	if !ok {
 		// channel not found,
-		err := fmt.Errorf("failed to join channel, channel is not found: %s", targetChannelName)
-		logger.Warn(err)
-		return
+		return fmt.Errorf("failed to join channel, channel is not found: %s", targetChannelName)
 	}
 
-	_, err = api.JoinChannel(targetChannelName)
+	_, err := api.JoinChannel(targetChannelName)
 	if err != nil {
-		err = fmt.Errorf("failed to join channel: %v", err)
-		logger.Warn(err)
+		return errors.Wrap(err, "failed to join channel")
 	}
+
+	return nil
 }

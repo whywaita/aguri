@@ -14,8 +14,7 @@ import (
 )
 
 var (
-	reChannel    = regexp.MustCompile(`(\S+)@(\S+):(\S+)`)
-	apiInstances = map[string]*slack.Client{}
+	reChannel = regexp.MustCompile(`(\S+)@(\S+):(\S+)`)
 )
 
 func validateMessage(fromType, aggrChannelName string, ev *slack.MessageEvent) bool {
@@ -49,17 +48,6 @@ func validateParsedMessage(userNames [][]string) bool {
 	return true
 }
 
-func getSlackApiInstance(workspaceName string) *slack.Client {
-	api, ok := apiInstances[workspaceName]
-	if ok == false {
-		// not found
-		api = slack.New(store.GetConfigFromAPI(workspaceName))
-		apiInstances[workspaceName] = api
-	}
-
-	return api
-}
-
 func HandleReplyMessage(loggerMap *store.SyncLoggerMap) {
 	toAPI := store.GetConfigToAPI()
 	rtm := toAPI.NewRTM()
@@ -82,10 +70,7 @@ func HandleReplyMessage(loggerMap *store.SyncLoggerMap) {
 
 			if ev.ThreadTimestamp == "" {
 				// maybe not in thread
-				err := HandleReplyNotInThreadMessage(ev, workspace, loggerMap)
-				if err != nil {
-					log.Println(err)
-				}
+				HandleReplyNotInThreadMessage(ev, workspace, loggerMap)
 				break
 			}
 
@@ -112,7 +97,7 @@ func HandleReplyInThreadMessage(ev *slack.MessageEvent, workspace string) error 
 	}
 
 	// Post
-	api := getSlackApiInstance(workspace)
+	api := store.GetSlackApiInstance(workspace)
 	param := slack.PostMessageParameters{
 		AsUser: true,
 	}
@@ -125,18 +110,30 @@ func HandleReplyInThreadMessage(ev *slack.MessageEvent, workspace string) error 
 	return nil
 }
 
-func HandleReplyNotInThreadMessage(ev *slack.MessageEvent, workspace string, loggerMap *store.SyncLoggerMap) error {
+func HandleReplyNotInThreadMessage(ev *slack.MessageEvent, workspace string, loggerMap *store.SyncLoggerMap) {
+	logger, err := loggerMap.Load(workspace)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	if ev.User != "" {
 		// write on toSlack
 		if strings.HasPrefix(ev.Text, AguriCommandPrefix) {
-			return HandleAguriCommands(ev.Text, workspace, loggerMap)
+			err := HandleAguriCommands(ev.Text, workspace)
+			if err != nil {
+				logger.Warn(err)
+			}
 		}
 	} else {
 		// write on fromSlack
-		return saveSlackLogs(ev, workspace)
+		err := saveSlackLogs(ev, workspace)
+		if err != nil {
+			logger.Warn(err)
+		}
 	}
 
-	return nil
+	return
 }
 
 func saveSlackLogs(ev *slack.MessageEvent, workspace string) error {
