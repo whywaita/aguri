@@ -53,6 +53,7 @@ func CommandJoin(targetChannelName, workspace string, loggerMap *store.SyncLogge
 
 	_, err = api.JoinChannel(targetChannelName)
 	if err != nil {
+		err = fmt.Errorf("failed to join channel: %v", err)
 		logger.Warn(err)
 	}
 }

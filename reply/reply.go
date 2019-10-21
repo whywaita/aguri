@@ -126,11 +126,17 @@ func HandleReplyInThreadMessage(ev *slack.MessageEvent, workspace string) error 
 }
 
 func HandleReplyNotInThreadMessage(ev *slack.MessageEvent, workspace string, loggerMap *store.SyncLoggerMap) error {
-	if strings.HasPrefix(ev.Text, AguriCommandPrefix) {
-		return HandleAguriCommands(ev.Text, workspace, loggerMap)
+	if ev.User != "" {
+		// write on toSlack
+		if strings.HasPrefix(ev.Text, AguriCommandPrefix) {
+			return HandleAguriCommands(ev.Text, workspace, loggerMap)
+		}
+	} else {
+		// write on fromSlack
+		return saveSlackLogs(ev, workspace)
 	}
 
-	return saveSlackLogs(ev, workspace)
+	return nil
 }
 
 func saveSlackLogs(ev *slack.MessageEvent, workspace string) error {
