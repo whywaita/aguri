@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/nlopes/slack"
+
 	"github.com/BurntSushi/toml"
 
 	"github.com/pkg/errors"
@@ -37,6 +39,7 @@ func LoadConfig(configPath string) error {
 	var tomlConfig Config
 	var err error
 	froms := map[string]string{}
+	fromApis := map[string]*slack.Client{}
 
 	b, err := fetch(configPath)
 	if err != nil {
@@ -46,12 +49,14 @@ func LoadConfig(configPath string) error {
 		return errors.Wrap(err, "failed to unmarshal toml config")
 	}
 
-	store.SetConfigToAPIToken(tomlConfig.To.Token)
+	store.SetConfigToApiToken(tomlConfig.To.Token)
 
 	for name, data := range tomlConfig.From {
 		froms[name] = data.Token
+		fromApis[name] = slack.New(data.Token)
 	}
-	store.SetConfigFroms(froms)
+	store.SetConfigFromTokens(froms)
+	store.SetFromApis(fromApis)
 
 	return nil
 }
