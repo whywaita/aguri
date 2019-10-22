@@ -5,9 +5,10 @@ import (
 )
 
 var (
-	fromAPIs   map[string]string
-	toAPI      *slack.Client
-	toAPIToken string
+	fromAPIs     map[string]string
+	toAPI        *slack.Client
+	toAPIToken   string
+	apiInstances map[string]*slack.Client
 )
 
 func SetConfigFroms(froms map[string]string) {
@@ -33,4 +34,15 @@ func GetConfigToAPIToken() string {
 
 func GetConfigToAPI() *slack.Client {
 	return toAPI
+}
+
+func GetSlackApiInstance(workspaceName string) *slack.Client {
+	api, ok := apiInstances[workspaceName]
+	if ok == false {
+		// not found
+		api = slack.New(GetConfigFromAPI(workspaceName))
+		apiInstances[workspaceName] = api
+	}
+
+	return api
 }
