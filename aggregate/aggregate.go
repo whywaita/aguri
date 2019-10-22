@@ -60,7 +60,8 @@ func handleCatchMessagePerWorkspace(workspaceName, token string, loggerMap *stor
 			*slack.DNDUpdatedEvent,
 			*slack.PrefChangeEvent,
 			*slack.ChannelJoinedEvent,
-			*slack.ChannelLeftEvent:
+			*slack.ChannelLeftEvent,
+			*slack.AccountsChangedEvent:
 			// ignore events
 		case *slack.ConnectionErrorEvent:
 			if strings.Contains(cast.ToString(msg.Data), "slack rate limit exceeded") {
