@@ -8,8 +8,11 @@ import (
 	"strings"
 
 	"github.com/nlopes/slack"
+	"github.com/nlopes/slack/slackutilsx"
+
 	"github.com/whywaita/aguri/config"
 	"github.com/whywaita/aguri/store"
+
 	"github.com/whywaita/slack_lib"
 )
 
@@ -32,7 +35,7 @@ func validateMessage(fromType, aggrChannelName string, ev *slack.MessageEvent) b
 		return false
 	}
 
-	if fromType != "channel" && fromType != "group" {
+	if fromType != slackutilsx.CTypeChannel.String() && fromType != slackutilsx.CTypeGroup.String() {
 		// TODO: implement other type
 		return false
 	}
