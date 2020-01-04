@@ -90,6 +90,8 @@ func HandleMessageEdited(ev *slack.MessageEvent, fromAPI *slack.Client, workspac
 		return errors.Wrap(err, "failed to post message")
 	}
 
+	store.SetSlackLog(workspace, ev.SubMessage.Timestamp, d.Channel, ev.SubMessage.Text, "", "")
+
 	return nil
 }
 
