@@ -101,7 +101,7 @@ func CommandPost(workspace, channel, body string) error {
 	param := slack.PostMessageParameters{
 		AsUser: true,
 	}
-	_, _, err := store.GetSlackApiInstance(workspace).PostMessage(channel, slack.MsgOptionText(body, true), slack.MsgOptionPostMessageParameters(param))
+	_, _, err := store.GetSlackApiInstance(workspace).PostMessage(channel, slack.MsgOptionText(body, false), slack.MsgOptionPostMessageParameters(param))
 	if err != nil {
 		return err
 	}
