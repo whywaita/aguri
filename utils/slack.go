@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"log"
 	"regexp"
 	"strings"
 
@@ -64,7 +63,7 @@ func GetMessageByTS(api *slack.Client, channel, timestamp string) (*slack.Messag
 	return &msg, nil
 }
 
-func ConvertUserIdtoName(msg string, ev *slack.MessageEvent, fromAPI *slack.Client) string {
+func ConvertUserIdtoName(msg string, ev *slack.MessageEvent, fromAPI *slack.Client) (string, error) {
 	userIds := reUser.FindAllStringSubmatch(ev.Text, -1)
 	if len(userIds) != 0 {
 		for _, ids := range userIds {
@@ -72,14 +71,13 @@ func ConvertUserIdtoName(msg string, ev *slack.MessageEvent, fromAPI *slack.Clie
 			id = strings.TrimSuffix(id, ">")
 			name, _, err := slack_lib.ConvertDisplayUserName(fromAPI, ev, id)
 			if err != nil {
-				log.Println(err)
-				break
+				return "", err
 			}
 			msg = strings.Replace(msg, id, name, -1)
 		}
 	}
 
-	return msg
+	return msg, nil
 }
 
 func GetUserInfo(fromAPI *slack.Client, ev *slack.MessageEvent) (username, icon string, err error) {
@@ -134,15 +132,14 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	attachments := ev.Attachments
 
 	// convert user id to user name in message
-	msg = ConvertUserIdtoName(msg, ev, fromAPI)
-	if msg != "" {
-		respChannel, respTimestamp, err := toAPI.PostMessage(aggrChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
-		if err != nil {
-			return errors.Wrap(err, "failed to post message")
-		}
+	msg, err = ConvertUserIdtoName(msg, ev, fromAPI)
+	if msg == "" || err != nil {
+		return errors.Wrap(err, "failed to convert id to name")
+	}
 
-		workspace := strings.TrimPrefix(aggrChannelName, config.PrefixSlackChannel)
-		store.SetSlackLog(workspace, ev.Timestamp, position, msg, respChannel, respTimestamp)
+	respChannel, respTimestamp, err := toAPI.PostMessage(aggrChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
+	if err != nil {
+		return errors.Wrap(err, "failed to post message")
 	}
 
 	if attachments != nil {
@@ -153,6 +150,9 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 			}
 		}
 	}
+
+	workspace := strings.TrimPrefix(aggrChannelName, config.PrefixSlackChannel)
+	store.SetSlackLog(workspace, ev.Timestamp, position, msg, respChannel, respTimestamp)
 
 	return nil
 }
