@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/whywaita/aguri/store"
-	"github.com/whywaita/aguri/utils"
 )
 
 const (
@@ -24,30 +23,33 @@ func HandleAguriCommands(text, workspace string) error {
 
 	switch subcommand {
 	case "join":
+		// join specific channel
 		if len(texts) == 2 {
 			return CommandJoin(texts[1], workspace)
 		}
 		return errors.New("Usage: \\aguri join <channel name>")
 
 	case "list":
+		// get all channels list
 		if len(texts) == 2 {
 			return CommandList(workspace, texts[1])
 		}
 		return errors.New("Usage: \\aguri list <channel>") // "group" , "im" not support yet.
+	case "post":
+		// post to specific channel
+		if len(texts) >= 3 {
+			channelName := texts[1]
+			body := strings.Join(texts[2:], "")
+			return CommandPost(workspace, channelName, body)
+		}
+		return errors.New("Usage \\aguri post <channel name> <message>")
 	default:
 		return fmt.Errorf("command not found: %s", subcommand)
 	}
 }
 
 func CommandJoin(targetChannelName, workspace string) error {
-	api := store.GetSlackApiInstance(workspace)
-	ok, _ := utils.CheckExistChannel(api, targetChannelName)
-	if !ok {
-		// channel not found,
-		return fmt.Errorf("failed to join channel, channel is not found: %s", targetChannelName)
-	}
-
-	_, err := api.JoinChannel(targetChannelName)
+	_, err := store.GetSlackApiInstance(workspace).JoinChannel(targetChannelName)
 	if err != nil {
 		return errors.Wrap(err, "failed to join channel")
 	}
@@ -92,5 +94,17 @@ func CommandList(workspace, target string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to post message")
 	}
+	return nil
+}
+
+func CommandPost(workspace, channel, body string) error {
+	param := slack.PostMessageParameters{
+		AsUser: true,
+	}
+	_, _, err := store.GetSlackApiInstance(workspace).PostMessage(channel, slack.MsgOptionText(body, true), slack.MsgOptionPostMessageParameters(param))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
