@@ -20,7 +20,7 @@ func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace
 	var err error
 
 	if lastTimestamp != ev.Timestamp {
-		// if lastTimestamp == eve.Timestamp, that message is same.
+		// if lastTimestamp == ev.Timestamp, that message is same.
 		toChannelName := config.GetToChannelName(workspace)
 
 		switch ev.SubType {
