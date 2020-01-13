@@ -44,7 +44,8 @@ func handleCatchMessagePerWorkspace(workspaceName, token string, loggerMap *stor
 			*slack.ReactionAddedEvent,
 			*slack.ReactionRemovedEvent,
 			*slack.MemberJoinedChannelEvent,
-			*slack.MemberLeftChannelEvent:
+			*slack.MemberLeftChannelEvent,
+			*slack.TeamJoinEvent:
 			// not implement events
 			logger.Debugf("Not Implement Event Type: %v, Data: %+v\n", msg.Type, msg.Data)
 		case *slack.HelloEvent,

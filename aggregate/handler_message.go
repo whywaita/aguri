@@ -20,7 +20,7 @@ func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace
 	var err error
 
 	if lastTimestamp != ev.Timestamp {
-		// if lastTimestamp == eve.Timestamp, that message is same.
+		// if lastTimestamp == ev.Timestamp, that message is same.
 		toChannelName := config.GetToChannelName(workspace)
 
 		switch ev.SubType {
@@ -90,7 +90,7 @@ func HandleMessageEdited(ev *slack.MessageEvent, fromAPI *slack.Client, workspac
 		return errors.Wrap(err, "failed to post message")
 	}
 
-	// store.SetSlackLog(workspace, ev.SubMessage.Timestamp, d.Channel, ev.SubMessage.Text)
+	store.SetSlackLog(workspace, ev.SubMessage.Timestamp, d.Channel, ev.SubMessage.Text, "", "")
 
 	return nil
 }
