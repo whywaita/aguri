@@ -39,7 +39,7 @@ func HandleAguriCommands(text, workspace string) error {
 		// post to specific channel
 		if len(texts) >= 3 {
 			channelName := texts[1]
-			body := strings.Join(texts[2:], "")
+			body := strings.Join(texts[2:], " ")
 			return CommandPost(workspace, channelName, body)
 		}
 		return errors.New("Usage \\aguri post <channel name> <message>")
