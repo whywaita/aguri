@@ -133,26 +133,29 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 
 	// convert user id to user name in message
 	msg, err = ConvertUserIdtoName(msg, ev, fromAPI)
-	if msg == "" || err != nil {
+	if err != nil {
 		return errors.Wrap(err, "failed to convert id to name")
 	}
 
-	respChannel, respTimestamp, err := toAPI.PostMessage(aggrChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
-	if err != nil {
-		return errors.Wrap(err, "failed to post message")
+	workspace := strings.TrimPrefix(aggrChannelName, config.PrefixSlackChannel)
+	if msg != "" {
+		respChannel, respTimestamp, err := toAPI.PostMessage(aggrChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
+		if err != nil {
+			return errors.Wrap(err, "failed to post message")
+		}
+		store.SetSlackLog(workspace, ev.Timestamp, position, msg, respChannel, respTimestamp)
 	}
-
+	// if msg is blank, maybe bot_message (for example, twitter integration).
+	// so, must post blank msg if this post have attachments.
 	if attachments != nil {
 		for _, attachment := range attachments {
-			_, _, err = toAPI.PostMessage(aggrChannelName, slack.MsgOptionPostMessageParameters(param), slack.MsgOptionAttachments(attachment))
+			respChannel, respTimestamp, err := toAPI.PostMessage(aggrChannelName, slack.MsgOptionPostMessageParameters(param), slack.MsgOptionAttachments(attachment))
 			if err != nil {
 				return errors.Wrap(err, "failed to post message")
 			}
+			store.SetSlackLog(workspace, ev.Timestamp, position, msg, respChannel, respTimestamp)
 		}
 	}
-
-	workspace := strings.TrimPrefix(aggrChannelName, config.PrefixSlackChannel)
-	store.SetSlackLog(workspace, ev.Timestamp, position, msg, respChannel, respTimestamp)
 
 	return nil
 }
