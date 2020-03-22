@@ -35,7 +35,7 @@ func CheckExistChannel(api *slack.Client, searchName string) (bool, error) {
 	return false, nil
 }
 
-func createNewChannel(api *slack.Client, name string) error {
+func CreateNewChannel(api *slack.Client, name string) error {
 	var err error
 	_, err = api.CreateChannel(name)
 	if err != nil {
@@ -105,16 +105,11 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	var err error
 
 	isExist, err := CheckExistChannel(toAPI, aggrChannelName)
+	if isExist == false {
+		return errors.Wrap(err, "channel is not found")
+	}
 	if err != nil {
 		return errors.Wrap(err, "failed to get info of exist channel")
-	}
-
-	if (isExist == false) && (err == nil) {
-		// if channel is not exist, make channel
-		err = createNewChannel(toAPI, aggrChannelName)
-		if err != nil {
-			return errors.Wrap(err, "failed to post message")
-		}
 	}
 
 	user, icon, err := GetUserInfo(fromAPI, ev)

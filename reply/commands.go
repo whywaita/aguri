@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/whywaita/aguri/utils"
+
 	"github.com/whywaita/aguri/config"
 
 	"github.com/nlopes/slack"
@@ -43,13 +45,27 @@ func HandleAguriCommands(text, workspace string) error {
 			return CommandPost(workspace, channelName, body)
 		}
 		return errors.New("Usage \\aguri post <channel name> <message>")
+	case "create":
+		// create channel
+		if len(texts) == 3 {
+			return CommandCreateChannel(workspace, texts[2])
+		}
+		return errors.New("Usage: \\aguri create channel <channel name>")
 	default:
 		return fmt.Errorf("command not found: %s", subcommand)
 	}
 }
 
 func CommandJoin(targetChannelName, workspace string) error {
-	_, err := store.GetSlackApiInstance(workspace).JoinChannel(targetChannelName)
+	isExist, err := utils.CheckExistChannel(store.GetSlackApiInstance(workspace), targetChannelName)
+	if isExist == false {
+		return errors.New("failed to join channel: channel is not found")
+	}
+	if err != nil {
+		return errors.Wrap(err, "failed to join channel")
+	}
+
+	_, err = store.GetSlackApiInstance(workspace).JoinChannel(targetChannelName)
 	if err != nil {
 		return errors.Wrap(err, "failed to join channel")
 	}
@@ -107,4 +123,8 @@ func CommandPost(workspace, channel, body string) error {
 	}
 
 	return nil
+}
+
+func CommandCreateChannel(workspace, channel string) error {
+	return utils.CreateNewChannel(store.GetSlackApiInstance(workspace), channel)
 }
