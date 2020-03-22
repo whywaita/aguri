@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -18,21 +19,46 @@ var (
 	reUser = regexp.MustCompile(`<@U(\S+)>`)
 )
 
-func CheckExistChannel(api *slack.Client, searchName string) (bool, error) {
+func IsExistChannel(api *slack.Client, searchName string) (bool, *slack.Channel, error) {
 	// channel is exist => True
-	channels, err := api.GetChannels(false)
+	targetConversationsType := []string{"public_channel", "private_channel"}
+	param := &slack.GetConversationsParameters{
+		Types: targetConversationsType,
+	}
+
+	channels, cursor, err := api.GetConversations(param)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to get channel info")
+		return false, nil, err
 	}
 
 	for _, channel := range channels {
 		if channel.Name == searchName {
-			// if channel is exist, return true
-			return true, nil
+			return true, &channel, nil
 		}
 	}
 
-	return false, nil
+	for cursor != "" {
+		// exists next pages
+		param := &slack.GetConversationsParameters{
+			Cursor: cursor,
+			Types:  targetConversationsType,
+		}
+		cs, cur, err := api.GetConversations(param)
+		if err != nil {
+			return false, nil, err
+		}
+
+		for _, c := range cs {
+			if c.Name == searchName {
+				return true, &c, nil
+			}
+		}
+
+		cursor = cur
+	}
+
+	// not found
+	return false, nil, fmt.Errorf("%s is not found", searchName)
 }
 
 func CreateNewChannel(api *slack.Client, name string) error {
@@ -63,7 +89,7 @@ func GetMessageByTS(api *slack.Client, channel, timestamp string) (*slack.Messag
 	return &msg, nil
 }
 
-func ConvertUserIdtoName(msg string, ev *slack.MessageEvent, fromAPI *slack.Client) (string, error) {
+func ConvertId2NameInMsg(msg string, ev *slack.MessageEvent, fromAPI *slack.Client) (string, error) {
 	userIds := reUser.FindAllStringSubmatch(ev.Text, -1)
 	if len(userIds) != 0 {
 		for _, ids := range userIds {
@@ -104,7 +130,7 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	// post aggregate message
 	var err error
 
-	isExist, err := CheckExistChannel(toAPI, aggrChannelName)
+	isExist, _, err := IsExistChannel(toAPI, aggrChannelName)
 	if isExist == false {
 		return errors.Wrap(err, "channel is not found")
 	}
@@ -127,7 +153,7 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	attachments := ev.Attachments
 
 	// convert user id to user name in message
-	msg, err = ConvertUserIdtoName(msg, ev, fromAPI)
+	msg, err = ConvertId2NameInMsg(msg, ev, fromAPI)
 	if err != nil {
 		return errors.Wrap(err, "failed to convert id to name")
 	}
