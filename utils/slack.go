@@ -180,3 +180,7 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 
 	return nil
 }
+
+func GenerateAguriUsername(msg *slack.Message, ch *slack.Channel, displayUsername string) string {
+	return displayUsername + "@" + strings.ToLower(ch.ID[:1]) + ":" + ch.Name
+}
