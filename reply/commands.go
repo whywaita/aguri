@@ -190,8 +190,7 @@ func CommandGetHistory(workspace, channel string, limit int) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to get history")
 			}
-			param.Username = botInfo.Name
-			param.IconURL = botInfo.Icons.Image36
+			param.Username = utils.GenerateAguriUsername(&m, ch, botInfo.Name)
 		}
 
 		_, _, err = toAPI.PostMessage(config.PrefixSlackChannel+workspace, slack.MsgOptionText(m.Text, false), slack.MsgOptionAttachments(m.Attachments...), slack.MsgOptionPostMessageParameters(param))
