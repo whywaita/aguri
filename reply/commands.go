@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/whywaita/slack_lib"
+
 	"github.com/whywaita/aguri/utils"
 
 	"github.com/whywaita/aguri/config"
@@ -51,13 +53,21 @@ func HandleAguriCommands(text, workspace string) error {
 			return CommandCreateChannel(workspace, texts[2])
 		}
 		return errors.New("Usage: \\aguri create channel <channel name>")
+
+	case "history":
+		// return message history that recent message
+		if len(texts) == 2 {
+			limit := 5
+			return CommandGetHistory(workspace, texts[1], limit)
+		}
+		return errors.New("Usage: \\aguri history <channel name>")
 	default:
 		return fmt.Errorf("command not found: %s", subcommand)
 	}
 }
 
 func CommandJoin(targetChannelName, workspace string) error {
-	isExist, err := utils.CheckExistChannel(store.GetSlackApiInstance(workspace), targetChannelName)
+	isExist, _, err := utils.IsExistChannel(store.GetSlackApiInstance(workspace), targetChannelName)
 	if isExist == false {
 		return errors.New("failed to join channel: channel is not found")
 	}
@@ -127,4 +137,67 @@ func CommandPost(workspace, channel, body string) error {
 
 func CommandCreateChannel(workspace, channel string) error {
 	return utils.CreateNewChannel(store.GetSlackApiInstance(workspace), channel)
+}
+
+func CommandGetHistory(workspace, channel string, limit int) error {
+	fromAPI := store.GetSlackApiInstance(workspace)
+	toAPI := store.GetConfigToAPI()
+	isExist, ch, err := utils.IsExistChannel(fromAPI, channel)
+	if isExist == false {
+		return errors.New(fmt.Sprintf("failed to get history: %s is not found", channel))
+	}
+	if err != nil {
+		return errors.Wrap(err, "failed to get history")
+	}
+
+	histParam := &slack.GetConversationHistoryParameters{
+		ChannelID: ch.ID,
+		Limit:     limit,
+	}
+
+	resp, err := fromAPI.GetConversationHistory(histParam)
+	if err != nil || resp.Err() != nil {
+		return errors.Wrap(err, "failed to get history")
+	}
+
+	resMsg := fmt.Sprintf("%s history...\n", channel)
+	param := slack.PostMessageParameters{
+		Username:  "aguri@s:system",
+		IconEmoji: ":ghost",
+	}
+
+	_, _, err = toAPI.PostMessage(config.PrefixSlackChannel+workspace, slack.MsgOptionText(resMsg, false), slack.MsgOptionPostMessageParameters(param))
+	if err != nil {
+		return errors.Wrap(err, "failed to get history")
+	}
+
+	for i := 1; i <= len(resp.Messages); i++ {
+		// resp.Message start newest message. but, this command is using oldest message.
+		m := resp.Messages[len(resp.Messages)-i]
+
+		if m.User != "" {
+			username, _, err := slack_lib.ConvertDisplayUserName(fromAPI, nil, m.User) // set user id, do not use ev
+			if err != nil {
+				return errors.Wrap(err, "failed to get history")
+			}
+			param.Username = utils.GenerateAguriUsername(&m, ch, username)
+		} else if m.BotID == "B01" {
+			// slackbot
+			param.Username = utils.GenerateAguriUsername(&m, ch, "SLACKBOT")
+		} else {
+			// bot
+			botInfo, err := fromAPI.GetBotInfo(m.BotID)
+			if err != nil {
+				return errors.Wrap(err, "failed to get history")
+			}
+			param.Username = utils.GenerateAguriUsername(&m, ch, botInfo.Name)
+		}
+
+		_, _, err = toAPI.PostMessage(config.PrefixSlackChannel+workspace, slack.MsgOptionText(m.Text, false), slack.MsgOptionAttachments(m.Attachments...), slack.MsgOptionPostMessageParameters(param))
+		if err != nil {
+			return errors.Wrap(err, "failed to get history")
+		}
+	}
+
+	return nil
 }
