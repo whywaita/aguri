@@ -7,12 +7,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/nlopes/slack"
-
 	"github.com/BurntSushi/toml"
-
 	"github.com/pkg/errors"
-
+	"github.com/slack-go/slack"
 	"github.com/whywaita/aguri/store"
 )
 

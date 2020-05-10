@@ -1,18 +1,16 @@
 package reply
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
-	"github.com/nlopes/slack"
-	"github.com/nlopes/slack/slackutilsx"
-
+	"github.com/pkg/errors"
+	"github.com/slack-go/slack"
+	"github.com/slack-go/slack/slackutilsx"
 	"github.com/whywaita/aguri/config"
 	"github.com/whywaita/aguri/store"
-
 	"github.com/whywaita/slack_lib"
 )
 

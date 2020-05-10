@@ -4,13 +4,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/spf13/cast"
-
-	"github.com/whywaita/aguri/config"
-
 	"github.com/sirupsen/logrus"
-
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
+	"github.com/spf13/cast"
+	"github.com/whywaita/aguri/config"
 	"github.com/whywaita/aguri/store"
 	"github.com/whywaita/slackrus"
 )
