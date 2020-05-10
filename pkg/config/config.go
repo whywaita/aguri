@@ -10,7 +10,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/pkg/errors"
 	"github.com/slack-go/slack"
-	"github.com/whywaita/aguri/store"
+	"github.com/whywaita/aguri/pkg/store"
 )
 
 const (

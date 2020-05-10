@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/slack-go/slack"
-	"github.com/whywaita/aguri/config"
-	"github.com/whywaita/aguri/store"
-	"github.com/whywaita/aguri/utils"
+	"github.com/whywaita/aguri/pkg/config"
+	"github.com/whywaita/aguri/pkg/store"
+	"github.com/whywaita/aguri/pkg/utils"
 	"github.com/whywaita/slack_lib"
 )
 

@@ -12,6 +12,10 @@ GO ?= GO111MODULE=on go
 test:  ## Run the tests.
 	@$(GO) test ./...
 
+.PHONY: dev
+dev:  # Run development
+	@$(GO) run main.go -config ./configs/config.toml
+
 .PHONY: build
 build: main.go  ## Build a binary.
 	$(GO) build -ldflags "$(LDFLAGS)"
