@@ -180,3 +180,29 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 func GenerateAguriUsername(msg *slack.Message, ch *slack.Channel, displayUsername string) string {
 	return displayUsername + "@" + strings.ToLower(ch.ID[:1]) + ":" + ch.Name
 }
+
+func GetAllConversations(api *slack.Client) ([]slack.Channel, error) {
+	params := &slack.GetConversationsParameters{
+		Cursor:          "",
+		ExcludeArchived: "true",
+		Limit:           0,
+		Types:           nil,
+	}
+
+	var channels []slack.Channel
+
+	for {
+		chs, cursor, err := api.GetConversations(params)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get channels")
+		}
+		channels = append(channels, chs...)
+
+		if cursor == "" {
+			break
+		}
+		params.Cursor = cursor
+	}
+
+	return channels, nil
+}

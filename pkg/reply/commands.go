@@ -89,9 +89,9 @@ func CommandList(workspace, target string) error {
 	}
 
 	api := store.GetSlackApiInstance(workspace)
-	channels, err := api.GetChannels(true)
+	channels, err := utils.GetAllConversations(api)
 	if err != nil {
-		return errors.Wrap(err, "failed to get channels")
+		return errors.Wrap(err, "failed to get all conversations")
 	}
 
 	var joinedChannels []string

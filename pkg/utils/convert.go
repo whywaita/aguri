@@ -91,7 +91,7 @@ func ConvertDisplayChannelName(api *slack.Client, ev *slack.MessageEvent) (fromT
 	fromType = channelType.String()
 	switch channelType {
 	case slackutilsx.CTypeChannel:
-		info, err := api.GetChannelInfo(ev.Channel)
+		info, err := api.GetConversationInfo(ev.Channel, false)
 		if err != nil {
 			if err.Error() == ErrMethodNotSupportedForChannelType {
 				// This error occurred by the private channels only converted from the public channel.
@@ -110,7 +110,7 @@ func ConvertDisplayChannelName(api *slack.Client, ev *slack.MessageEvent) (fromT
 		return fromType, info.Name, nil
 
 	case slackutilsx.CTypeGroup:
-		info, err := api.GetGroupInfo(ev.Channel)
+		info, err := api.GetConversationInfo(ev.Channel, false)
 		if err != nil {
 			return "", "", err
 		}
