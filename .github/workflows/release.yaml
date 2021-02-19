@@ -1,42 +1,25 @@
 name: release
 on:
-  create:
+  push:
     tags:
-    - v*.*.*
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
-  release:
-    name: release go binary
+  goreleaser:
     runs-on: ubuntu-latest
     steps:
-
-      - name: Set up Go 1.15
-        uses: actions/setup-go@v1
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Setup Go
+        uses: actions/setup-go@v2
         with:
           go-version: 1.15
-        id: go
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@master
-
-      - name: Build
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: latest
+          args: release --rm-dist
         env:
-          GO111MODULE: on
-          GOPATH: /home/runner/work/
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GOPROXY: direct
-          GOSUMDB: off
-        run: |
-          export CREATE_EVENT_REF_TYPE=$(jq --raw-output .ref_type "$GITHUB_EVENT_PATH")
-          export TAGNAME=$(jq --raw-output .ref "$GITHUB_EVENT_PATH")
-          echo "========================================================="
-          echo "DEBUG:" $TAGNAME $CREATE_EVENT_REF_TYPE
-          echo "========================================================="
-          if [ "$CREATE_EVENT_REF_TYPE" != "tag" ]; then echo "ref_type is not a tag: ${CREATE_EVENT_REF_TYPE}" && exit 2; fi
-          make cross
-          echo "========================================================="
-          echo "DEBUG: ls dist/"
-          ls dist/
-          echo "========================================================="
-          go get -u github.com/tcnksm/ghr
-          $GOPATH/bin/ghr -n ${TAGNAME} -b "Release ${TAGNAME}" -draft ${TAGNAME} dist/
