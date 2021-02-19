@@ -9,7 +9,6 @@ import (
 	"github.com/slack-go/slack"
 	"github.com/whywaita/aguri/pkg/config"
 	"github.com/whywaita/aguri/pkg/store"
-	"github.com/whywaita/slack_lib"
 )
 
 var (
@@ -92,7 +91,7 @@ func ConvertId2NameInMsg(msg string, ev *slack.MessageEvent, fromAPI *slack.Clie
 		for _, ids := range userIds {
 			id := strings.TrimPrefix(ids[0], "<@")
 			id = strings.TrimSuffix(id, ">")
-			name, _, err := slack_lib.ConvertDisplayUserName(fromAPI, ev, id)
+			name, _, err := ConvertDisplayUserName(fromAPI, ev, id)
 			if err != nil {
 				return "", err
 			}
@@ -105,7 +104,7 @@ func ConvertId2NameInMsg(msg string, ev *slack.MessageEvent, fromAPI *slack.Clie
 
 func GetUserInfo(fromAPI *slack.Client, ev *slack.MessageEvent) (username, icon string, err error) {
 	// get source username and channel, im, group
-	user, usertype, err := slack_lib.ConvertDisplayUserName(fromAPI, ev, "")
+	user, usertype, err := ConvertDisplayUserName(fromAPI, ev, "")
 	if err != nil {
 		return "", "", errors.Wrap(err, "failed to convert display name")
 	}
@@ -136,7 +135,7 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	}
 
 	user, icon, err := GetUserInfo(fromAPI, ev)
-	fType, position, err := slack_lib.ConvertDisplayChannelName(fromAPI, ev)
+	fType, position, err := ConvertDisplayChannelName(fromAPI, ev)
 	if err != nil {
 		return errors.Wrap(err, "failed to convert channel name")
 	}

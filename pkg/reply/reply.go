@@ -6,12 +6,13 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/whywaita/aguri/pkg/utils"
+
 	"github.com/pkg/errors"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackutilsx"
 	"github.com/whywaita/aguri/pkg/config"
 	"github.com/whywaita/aguri/pkg/store"
-	"github.com/whywaita/slack_lib"
 )
 
 var (
@@ -57,7 +58,7 @@ func HandleReplyMessage(loggerMap *store.SyncLoggerMap) {
 	for msg := range rtm.IncomingEvents {
 		switch ev := msg.Data.(type) {
 		case *slack.MessageEvent:
-			fromType, aggrChName, err := slack_lib.ConvertDisplayChannelName(toAPI, ev)
+			fromType, aggrChName, err := utils.ConvertDisplayChannelName(toAPI, ev)
 			if err != nil {
 				log.Println(err)
 				break
