@@ -1,7 +1,7 @@
 package store
 
 import (
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 )
 
 var (

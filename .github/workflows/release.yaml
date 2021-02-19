@@ -35,8 +35,8 @@ jobs:
           if [ "$CREATE_EVENT_REF_TYPE" != "tag" ]; then echo "ref_type is not a tag: ${CREATE_EVENT_REF_TYPE}" && exit 2; fi
           make cross
           echo "========================================================="
-          echo "DEBUG: ls pkg/"
-          ls pkg/
+          echo "DEBUG: ls dist/"
+          ls dist/
           echo "========================================================="
           go get -u github.com/tcnksm/ghr
-          $GOPATH/bin/ghr -n ${TAGNAME} -b "Release ${TAGNAME}" -draft ${TAGNAME} pkg/
+          $GOPATH/bin/ghr -n ${TAGNAME} -b "Release ${TAGNAME}" -draft ${TAGNAME} dist/

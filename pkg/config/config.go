@@ -7,13 +7,10 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/nlopes/slack"
-
 	"github.com/BurntSushi/toml"
-
 	"github.com/pkg/errors"
-
-	"github.com/whywaita/aguri/store"
+	"github.com/slack-go/slack"
+	"github.com/whywaita/aguri/pkg/store"
 )
 
 const (

@@ -1,17 +1,10 @@
 package main
 
 import (
-	"flag"
+	"fmt"
 	"log"
-	"os"
-	"strings"
 
-	"github.com/whywaita/aguri/store"
-
-	"github.com/sirupsen/logrus"
-	"github.com/whywaita/aguri/aggregate"
-	"github.com/whywaita/aguri/config"
-	"github.com/whywaita/aguri/reply"
+	"github.com/whywaita/aguri/cmd"
 )
 
 var (
@@ -19,31 +12,12 @@ var (
 	revision string
 )
 
+func init() {
+	fmt.Printf("aguri start! version: %v, revision: %v￿\n", version, revision)
+}
+
 func main() {
-	// parse args
-	var configPath = flag.String("config", "config.toml", "config file path")
-	flag.VisitAll(func(f *flag.Flag) {
-		if s := os.Getenv(strings.ToUpper(f.Name)); s != "" {
-			f.Value.Set(s)
-		}
-	})
-	flag.Parse()
-
-	// initialize
-	logrus.SetOutput(os.Stderr)
-
-	err := config.LoadConfig(*configPath)
-	if err != nil {
-		log.Fatalln("[ERROR] ", err)
-	}
-
-	log.Printf("aguri start! version: %v, revision: %v￿\n", version, revision)
-	loggerMap := store.NewSyncLoggerMap()
-
-	go reply.HandleReplyMessage(loggerMap)
-
-	err = aggregate.StartCatchMessage(loggerMap)
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		log.Fatal(err)
 	}
 }

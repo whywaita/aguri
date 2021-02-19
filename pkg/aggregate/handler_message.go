@@ -3,13 +3,12 @@ package aggregate
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
-
-	"github.com/nlopes/slack"
 	"github.com/pkg/errors"
-	"github.com/whywaita/aguri/config"
-	"github.com/whywaita/aguri/store"
-	"github.com/whywaita/aguri/utils"
+	"github.com/sirupsen/logrus"
+	"github.com/slack-go/slack"
+	"github.com/whywaita/aguri/pkg/config"
+	"github.com/whywaita/aguri/pkg/store"
+	"github.com/whywaita/aguri/pkg/utils"
 )
 
 var (
