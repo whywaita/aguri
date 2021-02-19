@@ -28,13 +28,13 @@ linux: main.go  ## Build a binary for linux.
 cross: main.go  ## Build binaries for cross platform.
 	mkdir -p pkg
 	@# darwin
-	@for arch in "amd64" "386"; do \
+	@for arch in "amd64"; do \
 		GOOS=darwin GOARCH=$${arch} make build; \
 		chmod +x aguri; \
 		zip pkg/aguri_$(VERSION)_darwin_$${arch}.zip aguri; \
 	done;
 	@# linux
-	@for arch in "amd64" "386" "arm64" "arm"; do \
+	@for arch in "amd64" "arm64" "arm"; do \
 		GOOS=linux GOARCH=$${arch} make build; \
 		chmod +x aguri; \
 		zip pkg/aguri_$(VERSION)_linux_$${arch}.zip aguri; \
