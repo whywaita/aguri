@@ -9,7 +9,6 @@ import (
 	"github.com/whywaita/aguri/pkg/config"
 	"github.com/whywaita/aguri/pkg/store"
 	"github.com/whywaita/aguri/pkg/utils"
-	"github.com/whywaita/slack_lib"
 )
 
 const (
@@ -90,9 +89,9 @@ func CommandList(workspace, target string) error {
 	}
 
 	api := store.GetSlackApiInstance(workspace)
-	channels, err := api.GetChannels(true)
+	channels, err := utils.GetAllConversations(api)
 	if err != nil {
-		return errors.Wrap(err, "failed to get channels")
+		return errors.Wrap(err, "failed to get all conversations")
 	}
 
 	var joinedChannels []string
@@ -172,7 +171,7 @@ func CommandGetHistory(workspace, channel string, limit int) error {
 		m := resp.Messages[len(resp.Messages)-i]
 
 		if m.User != "" {
-			username, _, err := slack_lib.ConvertDisplayUserName(fromAPI, nil, m.User) // set user id, do not use ev
+			username, _, err := utils.ConvertDisplayUserName(fromAPI, nil, m.User) // set user id, do not use ev
 			if err != nil {
 				return errors.Wrap(err, "failed to get history")
 			}
