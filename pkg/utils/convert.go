@@ -28,7 +28,7 @@ func GetConversationsList(api *slack.Client, types []slackutilsx.ChannelType) ([
 	}
 
 	param := &slack.GetConversationsParameters{
-		ExcludeArchived: "true",
+		ExcludeArchived: true,
 		Types:           paramTypes,
 	}
 
@@ -39,7 +39,7 @@ func GetConversationsList(api *slack.Client, types []slackutilsx.ChannelType) ([
 
 	for nextCursor != "" {
 		param = &slack.GetConversationsParameters{
-			ExcludeArchived: "true",
+			ExcludeArchived: true,
 			Types:           paramTypes,
 			Cursor:          nextCursor,
 		}

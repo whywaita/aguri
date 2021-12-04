@@ -59,7 +59,7 @@ func IsExistChannel(api *slack.Client, searchName string) (bool, *slack.Channel,
 
 func CreateNewChannel(api *slack.Client, name string) error {
 	var err error
-	_, err = api.CreateChannel(name)
+	_, err = api.CreateConversation(name, false)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new channel")
 	}
@@ -70,12 +70,13 @@ func CreateNewChannel(api *slack.Client, name string) error {
 func GetMessageByTS(api *slack.Client, channel, timestamp string) (*slack.Message, error) {
 	// get message via RestAPI by Timestamp
 	// want to get only one message
-	historyParam := slack.NewHistoryParameters()
-	// historyParam.Count = 1
-	historyParam.Latest = timestamp
-	historyParam.Oldest = timestamp
+	historyParam := &slack.GetConversationHistoryParameters{
+		ChannelID: channel,
+		Latest:    timestamp,
+		Oldest:    timestamp,
+	}
 
-	history, err := api.GetChannelHistory(channel, historyParam)
+	history, err := api.GetConversationHistory(historyParam)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get message history by timestamp")
 	}
@@ -184,7 +185,7 @@ func GenerateAguriUsername(msg *slack.Message, ch *slack.Channel, displayUsernam
 func GetAllConversations(api *slack.Client) ([]slack.Channel, error) {
 	params := &slack.GetConversationsParameters{
 		Cursor:          "",
-		ExcludeArchived: "true",
+		ExcludeArchived: true,
 		Limit:           0,
 		Types:           nil,
 	}
