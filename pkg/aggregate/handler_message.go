@@ -1,6 +1,7 @@
 package aggregate
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/sirupsen/logrus"
@@ -11,10 +12,12 @@ import (
 )
 
 var (
+	// ErrAttachmentNotFound is error message for "Detect Link Expand, but Attachment is not found"
 	ErrAttachmentNotFound = fmt.Errorf("Detect Link Expand, but Attachment is not found")
 )
 
-func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, lastTimestamp string, logger *logrus.Logger) string {
+// HandleMessageEvent handle message event
+func HandleMessageEvent(ctx context.Context, ev *slack.MessageEvent, fromAPI *slack.Client, workspace, lastTimestamp string, logger *logrus.Logger) string {
 	var err error
 
 	if lastTimestamp != ev.Timestamp {
@@ -25,7 +28,7 @@ func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace
 		case "message_changed":
 			switch {
 			case len(ev.SubMessage.Attachments) == 0:
-				err = HandleMessageEdited(ev, fromAPI, workspace, toChannelName)
+				err = handleMessageEdited(ctx, ev, fromAPI, workspace, toChannelName)
 				if err != nil {
 					logger.Warn(err)
 					break
@@ -33,7 +36,7 @@ func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace
 
 			case len(ev.SubMessage.Attachments) >= 1:
 				// message_changed and Text is null = URL link expand
-				err = HandleMessageLinkExpand(ev, fromAPI, workspace, logger)
+				err = handleMessageLinkExpand(ctx, ev, fromAPI, workspace, logger)
 				if err != nil && err != ErrAttachmentNotFound {
 					logger.Warn(err)
 					break
@@ -41,12 +44,12 @@ func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace
 			}
 
 		case "message_deleted":
-			err = HandleMessageDeleted(ev, fromAPI, workspace, toChannelName)
+			err = handleMessageDeleted(ctx, ev, fromAPI, workspace, toChannelName)
 			if err != nil {
 				logger.Warn(err)
 			}
 		default:
-			err = utils.PostMessageToChannel(store.GetConfigToAPI(), fromAPI, ev, ev.Text, toChannelName)
+			err = utils.PostMessageToChannel(ctx, store.GetConfigToAPI(), fromAPI, ev, ev.Text, toChannelName)
 			if err != nil {
 				logger.Warn(err)
 			}
@@ -58,7 +61,7 @@ func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace
 	return lastTimestamp
 }
 
-func HandleMessageDeleted(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, toChannelName string) error {
+func handleMessageDeleted(ctx context.Context, ev *slack.MessageEvent, fromAPI *slack.Client, workspace, toChannelName string) error {
 	d, err := store.GetSlackLog(workspace, ev.DeletedTimestamp)
 	if err != nil {
 		return fmt.Errorf("failed to get slack log from memory: %w", err)
@@ -66,7 +69,7 @@ func HandleMessageDeleted(ev *slack.MessageEvent, fromAPI *slack.Client, workspa
 
 	msg := fmt.Sprintf("Original Text:\n%v", d.Body)
 
-	err = utils.PostMessageToChannel(store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
+	err = utils.PostMessageToChannel(ctx, store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
 	if err != nil {
 		return fmt.Errorf("failed to post message: %w", err)
 	}
@@ -74,7 +77,7 @@ func HandleMessageDeleted(ev *slack.MessageEvent, fromAPI *slack.Client, workspa
 	return nil
 }
 
-func HandleMessageEdited(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, toChannelName string) error {
+func handleMessageEdited(ctx context.Context, ev *slack.MessageEvent, fromAPI *slack.Client, workspace, toChannelName string) error {
 	d, err := store.GetSlackLog(workspace, ev.SubMessage.Timestamp)
 	if err != nil {
 		return fmt.Errorf("failed to get slack log from memory: %w", err)
@@ -83,7 +86,7 @@ func HandleMessageEdited(ev *slack.MessageEvent, fromAPI *slack.Client, workspac
 	msg := fmt.Sprintf("Edited From:\n%v", d.Body)
 	msg += "\n\nEdited To:\n" + ev.SubMessage.Text
 
-	err = utils.PostMessageToChannel(store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
+	err = utils.PostMessageToChannel(ctx, store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
 	if err != nil {
 		return fmt.Errorf("failed to post message: %w", err)
 	}
@@ -93,7 +96,7 @@ func HandleMessageEdited(ev *slack.MessageEvent, fromAPI *slack.Client, workspac
 	return nil
 }
 
-func HandleMessageLinkExpand(ev *slack.MessageEvent, fromAPI *slack.Client, workspace string, logger *logrus.Logger) error {
+func handleMessageLinkExpand(ctx context.Context, ev *slack.MessageEvent, fromAPI *slack.Client, workspace string, logger *logrus.Logger) error {
 	d, err := store.GetSlackLog(workspace, ev.SubMessage.Timestamp)
 	if err != nil {
 		return fmt.Errorf("failed to get slack log from memory: %w", err)
@@ -103,10 +106,11 @@ func HandleMessageLinkExpand(ev *slack.MessageEvent, fromAPI *slack.Client, work
 	case len(ev.SubMessage.Attachments) == 0:
 		return ErrAttachmentNotFound
 	}
-	_, _, _, err = store.GetConfigToAPI().UpdateMessage(d.ToAPICID, d.ToAPITS,
+	_, _, _, err = store.GetConfigToAPI().UpdateMessageContext(ctx,
+		d.ToAPIChannelID, d.ToAPITimestamp,
 		slack.MsgOptionText(d.Body, false),
-		slack.MsgOptionUpdate(d.ToAPITS),
+		slack.MsgOptionUpdate(d.ToAPITimestamp),
 		slack.MsgOptionAttachments(ev.SubMessage.Attachments...),
 	)
-	return err
+	return fmt.Errorf("failed to update message: %w", err)
 }

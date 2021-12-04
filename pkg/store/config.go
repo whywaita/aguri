@@ -6,41 +6,49 @@ import (
 
 var (
 	fromApis      map[string]*slack.Client
-	fromApiTokens map[string]string
-	toApi         *slack.Client
-	toApiToken    string
+	fromAPITokens map[string]string
+	toAPI         *slack.Client
+	toAPIToken    string
 )
 
+// SetConfigFromTokens set token
 func SetConfigFromTokens(inputs map[string]string) {
-	fromApiTokens = inputs
+	fromAPITokens = inputs
 }
 
-func SetConfigToApiToken(token string) {
-	toApiToken = token
-	toApi = slack.New(token)
+// SetConfigToAPIToken set token and create API
+func SetConfigToAPIToken(token string) {
+	toAPIToken = token
+	toAPI = slack.New(token)
 }
 
+// GetConfigFromAPITokens get tokens
 func GetConfigFromAPITokens() map[string]string {
-	return fromApiTokens
+	return fromAPITokens
 }
 
+// GetConfigFromAPI get token
 func GetConfigFromAPI(workspaceName string) (token string) {
-	return fromApiTokens[workspaceName]
+	return fromAPITokens[workspaceName]
 }
 
+// GetConfigToAPIToken get token
 func GetConfigToAPIToken() string {
-	return toApiToken
+	return toAPIToken
 }
 
+// GetConfigToAPI get api instance
 func GetConfigToAPI() *slack.Client {
-	return toApi
+	return toAPI
 }
 
+// SetFromApis set api instances
 func SetFromApis(inputs map[string]*slack.Client) {
 	fromApis = inputs
 }
 
-func GetSlackApiInstance(workspaceName string) *slack.Client {
+// GetSlackAPIInstance get api instance
+func GetSlackAPIInstance(workspaceName string) *slack.Client {
 	api, ok := fromApis[workspaceName]
 	if ok == false {
 		// not found

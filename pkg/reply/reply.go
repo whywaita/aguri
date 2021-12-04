@@ -1,6 +1,7 @@
 package reply
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
@@ -48,81 +49,95 @@ func validateParsedMessage(userNames [][]string) bool {
 	return true
 }
 
-func HandleReplyMessage(loggerMap *store.SyncLoggerMap) {
+// HandleReplyMessage handle reply message from aggregated channel
+func HandleReplyMessage(ctx context.Context, loggerMap *store.SyncLoggerMap) error {
 	toAPI := store.GetConfigToAPI()
 	rtm := toAPI.NewRTM()
 	go rtm.ManageConnection()
 
-	for msg := range rtm.IncomingEvents {
-		switch ev := msg.Data.(type) {
-		case *slack.MessageEvent:
-			fromType, aggrChName, err := utils.ConvertDisplayChannelName(toAPI, ev)
-			if err != nil {
-				log.Println(err)
-				break
-			}
-			if !validateMessage(fromType, aggrChName, ev) {
-				// invalid message
-				break
-			}
-
-			workspace := strings.TrimPrefix(aggrChName, config.PrefixSlackChannel)
-
-			if ev.ThreadTimestamp == "" {
-				// maybe not in thread
-				HandleReplyNotInThreadMessage(ev, workspace, loggerMap)
-				break
-			}
-
-			err = HandleReplyInThreadMessage(ev, workspace)
-			if err != nil {
+	for {
+		select {
+		case msg := <-rtm.IncomingEvents:
+			if err := handleIncomingEvents(ctx, msg, toAPI, loggerMap); err != nil {
 				log.Println(err)
 			}
 
-		case *slack.RTMError:
-			fmt.Printf("Error: %s\n", ev.Error())
-
-		default:
-			// Ignore
+		case <-ctx.Done():
+			return nil
 		}
-
 	}
 }
 
-func HandleReplyInThreadMessage(ev *slack.MessageEvent, workspace string) error {
-	// reply message toSlack to fromSlack
-	logData, err := store.GetSlackLog(workspace, ev.ThreadTimestamp)
-	if err != nil {
-		return err
-	}
+func handleIncomingEvents(ctx context.Context, msg slack.RTMEvent, toAPI *slack.Client, loggerMap *store.SyncLoggerMap) error {
+	switch ev := msg.Data.(type) {
+	case *slack.MessageEvent:
+		fromType, aggrChName, err := utils.ConvertDisplayChannelName(ctx, toAPI, ev)
+		if err != nil {
+			return fmt.Errorf("failed to convert display channel name: %w", err)
 
-	// Post
-	api := store.GetSlackApiInstance(workspace)
-	param := slack.PostMessageParameters{
-		AsUser: true,
-	}
+		}
+		if !validateMessage(fromType, aggrChName, ev) {
+			// invalid message
+			return nil
+		}
 
-	_, _, err = api.PostMessage(logData.Channel, slack.MsgOptionText(ev.Text, false), slack.MsgOptionPostMessageParameters(param))
-	if err != nil {
-		return err
+		workspace := strings.TrimPrefix(aggrChName, config.PrefixSlackChannel)
+		if ev.ThreadTimestamp == "" {
+			// maybe not in thread
+			if err := handleReplyNotInThreadMessage(ctx, ev, workspace, loggerMap); err != nil {
+				return fmt.Errorf("failed to handle receive message: %w", err)
+			}
+		}
+
+		if err := handleReplyInThreadMessage(ctx, ev, workspace); err != nil {
+			return fmt.Errorf("failed to handle reply message: %w", err)
+		}
+
+	case *slack.RTMError:
+		return fmt.Errorf("detect rtm error: %s", ev.Error())
 	}
 
 	return nil
 }
 
-func HandleReplyNotInThreadMessage(ev *slack.MessageEvent, workspace string, loggerMap *store.SyncLoggerMap) {
+func handleReplyInThreadMessage(ctx context.Context, ev *slack.MessageEvent, workspace string) error {
+	// reply message toSlack to fromSlack
+	logData, err := store.GetSlackLog(workspace, ev.ThreadTimestamp)
+	if err != nil {
+		return fmt.Errorf("failed to get stored slack log: %w", err)
+	}
+
+	// Post
+	api := store.GetSlackAPIInstance(workspace)
+	param := slack.PostMessageParameters{
+		AsUser: true,
+	}
+
+	_, _, err = api.PostMessageContext(ctx,
+		logData.Channel,
+		slack.MsgOptionText(ev.Text, false),
+		slack.MsgOptionPostMessageParameters(param),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to post message: %w", err)
+	}
+
+	return nil
+}
+
+func handleReplyNotInThreadMessage(ctx context.Context, ev *slack.MessageEvent, workspace string, loggerMap *store.SyncLoggerMap) error {
 	logger, err := loggerMap.Load(workspace)
 	if err != nil {
-		log.Println(err)
-		return
+		return fmt.Errorf("failed to load loggerMap: %w", err)
 	}
 
 	if ev.User != "" {
 		// write on toSlack
 		if strings.HasPrefix(ev.Text, AguriCommandPrefix) {
-			err := HandleAguriCommands(ev.Text, workspace)
+			err := HandleAguriCommands(ctx, ev.Text, workspace)
 			if err != nil {
 				logger.Warn(err)
+				return nil
 			}
 		}
 	} else {
@@ -130,10 +145,11 @@ func HandleReplyNotInThreadMessage(ev *slack.MessageEvent, workspace string, log
 		err := saveSlackLogs(ev, workspace)
 		if err != nil {
 			logger.Warn(err)
+			return nil
 		}
 	}
 
-	return
+	return nil
 }
 
 func saveSlackLogs(ev *slack.MessageEvent, workspace string) error {

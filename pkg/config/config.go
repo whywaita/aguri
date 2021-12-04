@@ -13,24 +13,27 @@ import (
 )
 
 const (
+	// PrefixSlackChannel is prefix of aggregated messages
 	PrefixSlackChannel = "aggr-"
 )
 
+// Config is config of aguri
 type Config struct {
 	To   To              `toml:"to"`
 	From map[string]From `toml:"from"`
 }
 
-// for toml
+// To is token of aggregated slack
 type To struct {
 	Token string `toml:"token"`
 }
 
-// for toml
+// From is token of source slack
 type From struct {
 	Token string `toml:"token"`
 }
 
+// LoadConfig load config from configPath
 func LoadConfig(configPath string) error {
 	var tomlConfig Config
 	var err error
@@ -45,7 +48,7 @@ func LoadConfig(configPath string) error {
 		return fmt.Errorf("failed to unmarshal toml config: %w", err)
 	}
 
-	store.SetConfigToApiToken(tomlConfig.To.Token)
+	store.SetConfigToAPIToken(tomlConfig.To.Token)
 
 	for name, data := range tomlConfig.From {
 		froms[name] = data.Token
@@ -81,6 +84,7 @@ func fetchHTTP(u *url.URL) ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
 
+// GetToChannelName get channel name for aggregated message
 func GetToChannelName(workspaceName string) string {
 	return PrefixSlackChannel + strings.ToLower(workspaceName)
 }
