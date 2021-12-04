@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
 
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackutilsx"
@@ -69,19 +69,19 @@ func Concat(xs, ys []slack.Channel) []slack.Channel {
 	return zs
 }
 
-func ConvertDisplayPrivateChannel(api *slack.Client, channelId string) (string, error) {
+func ConvertDisplayPrivateChannel(api *slack.Client, channelID string) (string, error) {
 	channels, err := GetConversationsList(api, []slackutilsx.ChannelType{slackutilsx.CTypeGroup})
 	if err != nil {
 		return "", err
 	}
 
 	for _, c := range channels {
-		if c.ID == channelId {
+		if c.ID == channelID {
 			return c.Name, nil
 		}
 	}
 
-	return "", errors.New("channel not found")
+	return "", fmt.Errorf("channel not found")
 }
 
 func ConvertDisplayChannelName(api *slack.Client, ev *slack.MessageEvent) (fromType, name string, err error) {
@@ -102,9 +102,8 @@ func ConvertDisplayChannelName(api *slack.Client, ev *slack.MessageEvent) (fromT
 				}
 
 				return fromType, name, nil
-			} else {
-				return "", "", err
 			}
+			return "", "", err
 		}
 
 		return fromType, info.Name, nil
@@ -132,7 +131,7 @@ func ConvertDisplayChannelName(api *slack.Client, ev *slack.MessageEvent) (fromT
 		name = ""
 	}
 
-	return "", "", errors.New("channel not found")
+	return "", "", fmt.Errorf("channel not found")
 }
 
 func ConvertDisplayUserName(api *slack.Client, ev *slack.MessageEvent, id string) (username, usertype string, err error) {

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/pkg/errors"
 	"github.com/slack-go/slack"
 	"github.com/whywaita/aguri/pkg/store"
 )
@@ -40,10 +39,10 @@ func LoadConfig(configPath string) error {
 
 	b, err := fetch(configPath)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to load config from %s", configPath))
+		return fmt.Errorf("failed to load config from %s: %w", configPath, err)
 	}
 	if err := toml.Unmarshal(b, &tomlConfig); err != nil {
-		return errors.Wrap(err, "failed to unmarshal toml config")
+		return fmt.Errorf("failed to unmarshal toml config: %w", err)
 	}
 
 	store.SetConfigToApiToken(tomlConfig.To.Token)
@@ -76,7 +75,7 @@ func fetch(configPath string) ([]byte, error) {
 func fetchHTTP(u *url.URL) ([]byte, error) {
 	resp, err := http.Get(u.String())
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get config via HTTP(S)")
+		return nil, fmt.Errorf("failed to get config via HTTP(S): %w", err)
 	}
 	defer resp.Body.Close()
 	return ioutil.ReadAll(resp.Body)

@@ -6,13 +6,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/whywaita/aguri/pkg/utils"
-
-	"github.com/pkg/errors"
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackutilsx"
 	"github.com/whywaita/aguri/pkg/config"
 	"github.com/whywaita/aguri/pkg/store"
+	"github.com/whywaita/aguri/pkg/utils"
 )
 
 var (
@@ -141,7 +139,7 @@ func HandleReplyNotInThreadMessage(ev *slack.MessageEvent, workspace string, log
 func saveSlackLogs(ev *slack.MessageEvent, workspace string) error {
 	// save slack log to store package
 	if ev.Username == "" {
-		return errors.New("Username is not found")
+		return fmt.Errorf("Username is not found")
 	}
 
 	// parse username
@@ -149,7 +147,7 @@ func saveSlackLogs(ev *slack.MessageEvent, workspace string) error {
 	if !validateParsedMessage(userNames) {
 		// miss regexp
 		// or not channel
-		return errors.New("failed to validate message")
+		return fmt.Errorf("failed to validate message")
 	}
 
 	if len(userNames[0]) < 3 {

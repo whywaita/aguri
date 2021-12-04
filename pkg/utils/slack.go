@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/slack-go/slack"
 	"github.com/whywaita/aguri/pkg/config"
 	"github.com/whywaita/aguri/pkg/store"
@@ -61,7 +60,7 @@ func CreateNewChannel(api *slack.Client, name string) error {
 	var err error
 	_, err = api.CreateConversation(name, false)
 	if err != nil {
-		return errors.Wrap(err, "failed to create new channel")
+		return fmt.Errorf("failed to create new channel: %w", err)
 	}
 
 	return nil
@@ -78,7 +77,7 @@ func GetMessageByTS(api *slack.Client, channel, timestamp string) (*slack.Messag
 
 	history, err := api.GetConversationHistory(historyParam)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get message history by timestamp")
+		return nil, fmt.Errorf("failed to get message history by timestamp: %w", err)
 	}
 
 	msg := history.Messages[0]
@@ -107,13 +106,13 @@ func GetUserInfo(fromAPI *slack.Client, ev *slack.MessageEvent) (username, icon 
 	// get source username and channel, im, group
 	user, usertype, err := ConvertDisplayUserName(fromAPI, ev, "")
 	if err != nil {
-		return "", "", errors.Wrap(err, "failed to convert display name")
+		return "", "", fmt.Errorf("failed to convert display name: %w", err)
 	}
 
 	if usertype == "user" {
 		u, err := fromAPI.GetUserInfo(ev.Msg.User)
 		if err != nil {
-			return "", "", errors.Wrap(err, "failed to get user info")
+			return "", "", fmt.Errorf("failed to get user info: %w", err)
 		}
 		icon = u.Profile.Image192
 	} else {
@@ -129,16 +128,16 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 
 	isExist, _, err := IsExistChannel(toAPI, aggrChannelName)
 	if isExist == false {
-		return errors.Wrap(err, "channel is not found")
+		return fmt.Errorf("channel is not found: %w", err)
 	}
 	if err != nil {
-		return errors.Wrap(err, "failed to get info of exist channel")
+		return fmt.Errorf("failed to get info of exist channel: %w", err)
 	}
 
 	user, icon, err := GetUserInfo(fromAPI, ev)
 	fType, position, err := ConvertDisplayChannelName(fromAPI, ev)
 	if err != nil {
-		return errors.Wrap(err, "failed to convert channel name")
+		return fmt.Errorf("failed to convert channel name: %w", err)
 	}
 
 	param := slack.PostMessageParameters{
@@ -152,14 +151,14 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 	// convert user id to user name in message
 	msg, err = ConvertId2NameInMsg(msg, ev, fromAPI)
 	if err != nil {
-		return errors.Wrap(err, "failed to convert id to name")
+		return fmt.Errorf("failed to convert id to name: %w", err)
 	}
 
 	workspace := strings.TrimPrefix(aggrChannelName, config.PrefixSlackChannel)
 	if msg != "" {
 		respChannel, respTimestamp, err := toAPI.PostMessage(aggrChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
 		if err != nil {
-			return errors.Wrap(err, "failed to post message")
+			return fmt.Errorf("failed to post message: %w", err)
 		}
 		store.SetSlackLog(workspace, ev.Timestamp, position, msg, respChannel, respTimestamp)
 	}
@@ -169,7 +168,7 @@ func PostMessageToChannel(toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, 
 		for _, attachment := range attachments {
 			respChannel, respTimestamp, err := toAPI.PostMessage(aggrChannelName, slack.MsgOptionPostMessageParameters(param), slack.MsgOptionAttachments(attachment))
 			if err != nil {
-				return errors.Wrap(err, "failed to post message")
+				return fmt.Errorf("failed to post message: %w", err)
 			}
 			store.SetSlackLog(workspace, ev.Timestamp, position, msg, respChannel, respTimestamp)
 		}
@@ -195,7 +194,7 @@ func GetAllConversations(api *slack.Client) ([]slack.Channel, error) {
 	for {
 		chs, cursor, err := api.GetConversations(params)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to get channels")
+			return nil, fmt.Errorf("failed to get channels: %w", err)
 		}
 		channels = append(channels, chs...)
 

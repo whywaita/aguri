@@ -1,9 +1,8 @@
 package store
 
 import (
+	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 var (
@@ -18,7 +17,7 @@ type LogData struct {
 }
 
 var (
-	ErrSourceChannelNotFound = errors.New("source channel is not found")
+	ErrSourceChannelNotFound = fmt.Errorf("source channel is not found")
 )
 
 func SetSlackLog(workspace, timestamp, channelName, text, toAPIChannelID, toAPITimestamp string) {
@@ -39,7 +38,7 @@ func GetSlackLog(workspace, timestamp string) (*LogData, error) {
 	val, ok := log[parent]
 	if ok == false {
 		// TODO: if can't get channel name, search old message using slack API
-		return nil, errors.Wrap(ErrSourceChannelNotFound, "")
+		return nil, ErrSourceChannelNotFound
 	}
 
 	return &val, nil

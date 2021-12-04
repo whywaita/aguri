@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/slack-go/slack"
 	"github.com/whywaita/aguri/pkg/config"
 	"github.com/whywaita/aguri/pkg/store"
@@ -26,14 +25,14 @@ func HandleAguriCommands(text, workspace string) error {
 		if len(texts) == 2 {
 			return CommandJoin(texts[1], workspace)
 		}
-		return errors.New("Usage: \\aguri join <channel name>")
+		return fmt.Errorf("Usage: \\aguri join <channel name>")
 
 	case "list":
 		// get all channels list
 		if len(texts) == 2 {
 			return CommandList(workspace, texts[1])
 		}
-		return errors.New("Usage: \\aguri list <channel>") // "group" , "im" not support yet.
+		return fmt.Errorf("Usage: \\aguri list <channel>") // "group" , "im" not support yet.
 	case "post":
 		// post to specific channel
 		if len(texts) >= 3 {
@@ -41,13 +40,13 @@ func HandleAguriCommands(text, workspace string) error {
 			body := strings.Join(texts[2:], " ")
 			return CommandPost(workspace, channelName, body)
 		}
-		return errors.New("Usage \\aguri post <channel name> <message>")
+		return fmt.Errorf("Usage \\aguri post <channel name> <message>")
 	case "create":
 		// create channel
 		if len(texts) == 3 {
 			return CommandCreateChannel(workspace, texts[2])
 		}
-		return errors.New("Usage: \\aguri create channel <channel name>")
+		return fmt.Errorf("Usage: \\aguri create channel <channel name>")
 
 	case "history":
 		// return message history that recent message
@@ -55,7 +54,7 @@ func HandleAguriCommands(text, workspace string) error {
 			limit := 5
 			return CommandGetHistory(workspace, texts[1], limit)
 		}
-		return errors.New("Usage: \\aguri history <channel name>")
+		return fmt.Errorf("Usage: \\aguri history <channel name>")
 	default:
 		return fmt.Errorf("command not found: %s", subcommand)
 	}
@@ -64,14 +63,14 @@ func HandleAguriCommands(text, workspace string) error {
 func CommandJoin(targetChannelName, workspace string) error {
 	isExist, ch, err := utils.IsExistChannel(store.GetSlackApiInstance(workspace), targetChannelName)
 	if isExist == false {
-		return errors.New("failed to join channel: channel is not found")
+		return fmt.Errorf("failed to join channel: channel is not found")
 	}
 	if err != nil {
-		return errors.Wrap(err, "failed to join channel")
+		return fmt.Errorf("failed to join channel: %w", err)
 	}
 
 	if _, _, _, err := store.GetSlackApiInstance(workspace).JoinConversation(ch.ID); err != nil {
-		return errors.Wrap(err, "failed to join channel")
+		return fmt.Errorf("failed to join channel: %w", err)
 	}
 
 	return nil
@@ -90,7 +89,7 @@ func CommandList(workspace, target string) error {
 	api := store.GetSlackApiInstance(workspace)
 	channels, err := utils.GetAllConversations(api)
 	if err != nil {
-		return errors.Wrap(err, "failed to get all conversations")
+		return fmt.Errorf("failed to get all conversations: %w", err)
 	}
 
 	var joinedChannels []string
@@ -112,7 +111,7 @@ func CommandList(workspace, target string) error {
 	}
 	_, _, err = toAPI.PostMessage(config.PrefixSlackChannel+workspace, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
 	if err != nil {
-		return errors.Wrap(err, "failed to post message")
+		return fmt.Errorf("failed to post message: %w", err)
 	}
 	return nil
 }
@@ -138,10 +137,10 @@ func CommandGetHistory(workspace, channel string, limit int) error {
 	toAPI := store.GetConfigToAPI()
 	isExist, ch, err := utils.IsExistChannel(fromAPI, channel)
 	if isExist == false {
-		return errors.New(fmt.Sprintf("failed to get history: %s is not found", channel))
+		return fmt.Errorf(fmt.Sprintf("failed to get history: %s is not found", channel))
 	}
 	if err != nil {
-		return errors.Wrap(err, "failed to get history")
+		return fmt.Errorf("failed to get history: %w", err)
 	}
 
 	histParam := &slack.GetConversationHistoryParameters{
@@ -151,7 +150,7 @@ func CommandGetHistory(workspace, channel string, limit int) error {
 
 	resp, err := fromAPI.GetConversationHistory(histParam)
 	if err != nil || resp.Err() != nil {
-		return errors.Wrap(err, "failed to get history")
+		return fmt.Errorf("failed to get history: %w", err)
 	}
 
 	resMsg := fmt.Sprintf("%s history...\n", channel)
@@ -162,7 +161,7 @@ func CommandGetHistory(workspace, channel string, limit int) error {
 
 	_, _, err = toAPI.PostMessage(config.PrefixSlackChannel+workspace, slack.MsgOptionText(resMsg, false), slack.MsgOptionPostMessageParameters(param))
 	if err != nil {
-		return errors.Wrap(err, "failed to get history")
+		return fmt.Errorf("failed to get history: %w", err)
 	}
 
 	for i := 1; i <= len(resp.Messages); i++ {
@@ -172,7 +171,7 @@ func CommandGetHistory(workspace, channel string, limit int) error {
 		if m.User != "" {
 			username, _, err := utils.ConvertDisplayUserName(fromAPI, nil, m.User) // set user id, do not use ev
 			if err != nil {
-				return errors.Wrap(err, "failed to get history")
+				return fmt.Errorf("failed to get history: %w", err)
 			}
 			param.Username = utils.GenerateAguriUsername(&m, ch, username)
 		} else if m.BotID == "B01" {
@@ -182,14 +181,14 @@ func CommandGetHistory(workspace, channel string, limit int) error {
 			// bot
 			botInfo, err := fromAPI.GetBotInfo(m.BotID)
 			if err != nil {
-				return errors.Wrap(err, "failed to get history")
+				return fmt.Errorf("failed to get history: %w", err)
 			}
 			param.Username = utils.GenerateAguriUsername(&m, ch, botInfo.Name)
 		}
 
 		_, _, err = toAPI.PostMessage(config.PrefixSlackChannel+workspace, slack.MsgOptionText(m.Text, false), slack.MsgOptionAttachments(m.Attachments...), slack.MsgOptionPostMessageParameters(param))
 		if err != nil {
-			return errors.Wrap(err, "failed to get history")
+			return fmt.Errorf("failed to get history: %w", err)
 		}
 	}
 

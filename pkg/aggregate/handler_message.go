@@ -3,7 +3,6 @@ package aggregate
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/slack-go/slack"
 	"github.com/whywaita/aguri/pkg/config"
@@ -12,7 +11,7 @@ import (
 )
 
 var (
-	ErrAttachmentNotFound = errors.New("Detect Link Expand, but Attachment is not found")
+	ErrAttachmentNotFound = fmt.Errorf("Detect Link Expand, but Attachment is not found")
 )
 
 func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, lastTimestamp string, logger *logrus.Logger) string {
@@ -62,14 +61,14 @@ func HandleMessageEvent(ev *slack.MessageEvent, fromAPI *slack.Client, workspace
 func HandleMessageDeleted(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, toChannelName string) error {
 	d, err := store.GetSlackLog(workspace, ev.DeletedTimestamp)
 	if err != nil {
-		return errors.Wrap(err, "failed to get slack log from memory")
+		return fmt.Errorf("failed to get slack log from memory: %w", err)
 	}
 
 	msg := fmt.Sprintf("Original Text:\n%v", d.Body)
 
 	err = utils.PostMessageToChannel(store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
 	if err != nil {
-		return errors.Wrap(err, "failed to post message")
+		return fmt.Errorf("failed to post message: %w", err)
 	}
 
 	return nil
@@ -78,7 +77,7 @@ func HandleMessageDeleted(ev *slack.MessageEvent, fromAPI *slack.Client, workspa
 func HandleMessageEdited(ev *slack.MessageEvent, fromAPI *slack.Client, workspace, toChannelName string) error {
 	d, err := store.GetSlackLog(workspace, ev.SubMessage.Timestamp)
 	if err != nil {
-		return errors.Wrap(err, "failed to get slack log from memory")
+		return fmt.Errorf("failed to get slack log from memory: %w", err)
 	}
 
 	msg := fmt.Sprintf("Edited From:\n%v", d.Body)
@@ -86,7 +85,7 @@ func HandleMessageEdited(ev *slack.MessageEvent, fromAPI *slack.Client, workspac
 
 	err = utils.PostMessageToChannel(store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
 	if err != nil {
-		return errors.Wrap(err, "failed to post message")
+		return fmt.Errorf("failed to post message: %w", err)
 	}
 
 	store.SetSlackLog(workspace, ev.SubMessage.Timestamp, d.Channel, ev.SubMessage.Text, "", "")
@@ -97,7 +96,7 @@ func HandleMessageEdited(ev *slack.MessageEvent, fromAPI *slack.Client, workspac
 func HandleMessageLinkExpand(ev *slack.MessageEvent, fromAPI *slack.Client, workspace string, logger *logrus.Logger) error {
 	d, err := store.GetSlackLog(workspace, ev.SubMessage.Timestamp)
 	if err != nil {
-		return errors.Wrap(err, "failed to get slack log from memory")
+		return fmt.Errorf("failed to get slack log from memory: %w", err)
 	}
 
 	switch {
