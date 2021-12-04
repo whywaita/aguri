@@ -1,6 +1,7 @@
 package aggregate
 
 import (
+	"context"
 	"strings"
 	"sync"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/whywaita/slackrus"
 )
 
-func handleCatchMessagePerWorkspace(workspaceName, token string, loggerMap *store.SyncLoggerMap) {
+func handleCatchMessagePerWorkspace(ctx context.Context, workspaceName, token string, loggerMap *store.SyncLoggerMap) {
 	var lastTimestamp string
 
 	logger := logrus.New()
@@ -27,14 +28,14 @@ func handleCatchMessagePerWorkspace(workspaceName, token string, loggerMap *stor
 	loggerMap.Store(workspaceName, logger)
 
 	fromAPI := slack.New(token)
-	rtm := fromAPI.NewRTM()
+	rtm := fromAPI.NewRTM(slack.RTMOptionUseStart(false))
 	go rtm.ManageConnection()
 	for msg := range rtm.IncomingEvents {
 		switch ev := msg.Data.(type) {
 		case *slack.ConnectedEvent:
 			// info = ev.Info
 		case *slack.MessageEvent:
-			lastTimestamp = HandleMessageEvent(ev, fromAPI, workspaceName, lastTimestamp, logger)
+			lastTimestamp = HandleMessageEvent(ctx, ev, fromAPI, workspaceName, lastTimestamp, logger)
 		case *slack.RTMError:
 			logger.Infof("RTM Error: %s\n", ev.Error())
 		case *slack.FilePublicEvent,
@@ -73,7 +74,8 @@ func handleCatchMessagePerWorkspace(workspaceName, token string, loggerMap *stor
 	}
 }
 
-func StartCatchMessage(loggerMap *store.SyncLoggerMap) error {
+// StartCatchMessage start handler of message
+func StartCatchMessage(ctx context.Context, loggerMap *store.SyncLoggerMap) error {
 	var wg sync.WaitGroup
 
 	froms := store.GetConfigFromAPITokens()
@@ -83,7 +85,7 @@ func StartCatchMessage(loggerMap *store.SyncLoggerMap) error {
 		fromToken := token
 		fromTeam := team
 		go func() {
-			handleCatchMessagePerWorkspace(fromTeam, fromToken, loggerMap)
+			handleCatchMessagePerWorkspace(ctx, fromTeam, fromToken, loggerMap)
 			wg.Done()
 		}()
 	}

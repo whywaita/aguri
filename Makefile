@@ -20,8 +20,8 @@ dev:  # Run development
 build: main.go  ## Build a binary.
 	$(GO) build -ldflags "$(LDFLAGS)"
 
-.PHONY: linux
-linux: main.go  ## Build a binary for linux.
+.PHONY: build-linux
+build-linux: main.go  ## Build a binary for linux.
 	GOOS=linux GOARCH=amd64 make build
 
 .PHONY: cross

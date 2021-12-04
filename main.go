@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -17,7 +18,9 @@ func init() {
 }
 
 func main() {
-	if err := cmd.Run(); err != nil {
+	ctx := context.Background()
+
+	if err := cmd.Run(ctx); err != nil {
 		log.Fatal(err)
 	}
 }
