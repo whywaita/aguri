@@ -36,8 +36,7 @@ func HandleMessageEvent(ctx context.Context, ev *slack.MessageEvent, fromAPI *sl
 
 			case len(ev.SubMessage.Attachments) >= 1:
 				// message_changed and Text is null = URL link expand
-				err = handleMessageLinkExpand(ctx, ev, fromAPI, workspace, logger)
-				if err != nil && err != ErrAttachmentNotFound {
+				if err = handleMessageLinkExpand(ctx, ev, fromAPI, workspace, logger); err != nil && err != ErrAttachmentNotFound {
 					logger.Warn(err)
 					break
 				}
@@ -106,11 +105,13 @@ func handleMessageLinkExpand(ctx context.Context, ev *slack.MessageEvent, fromAP
 	case len(ev.SubMessage.Attachments) == 0:
 		return ErrAttachmentNotFound
 	}
-	_, _, _, err = store.GetConfigToAPI().UpdateMessageContext(ctx,
+	if _, _, _, err = store.GetConfigToAPI().UpdateMessageContext(ctx,
 		d.ToAPIChannelID, d.ToAPITimestamp,
 		slack.MsgOptionText(d.Body, false),
 		slack.MsgOptionUpdate(d.ToAPITimestamp),
 		slack.MsgOptionAttachments(ev.SubMessage.Attachments...),
-	)
-	return fmt.Errorf("failed to update message: %w", err)
+	); err != nil {
+		return fmt.Errorf("failed to update message: %w", err)
+	}
+	return nil
 }
