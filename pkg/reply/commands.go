@@ -62,7 +62,7 @@ func HandleAguriCommands(text, workspace string) error {
 }
 
 func CommandJoin(targetChannelName, workspace string) error {
-	isExist, _, err := utils.IsExistChannel(store.GetSlackApiInstance(workspace), targetChannelName)
+	isExist, ch, err := utils.IsExistChannel(store.GetSlackApiInstance(workspace), targetChannelName)
 	if isExist == false {
 		return errors.New("failed to join channel: channel is not found")
 	}
@@ -70,8 +70,7 @@ func CommandJoin(targetChannelName, workspace string) error {
 		return errors.Wrap(err, "failed to join channel")
 	}
 
-	_, err = store.GetSlackApiInstance(workspace).JoinChannel(targetChannelName)
-	if err != nil {
+	if _, _, _, err := store.GetSlackApiInstance(workspace).JoinConversation(ch.ID); err != nil {
 		return errors.Wrap(err, "failed to join channel")
 	}
 
