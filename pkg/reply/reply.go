@@ -52,7 +52,7 @@ func validateParsedMessage(userNames [][]string) bool {
 // HandleReplyMessage handle reply message from aggregated channel
 func HandleReplyMessage(ctx context.Context, loggerMap *store.SyncLoggerMap) error {
 	toAPI := store.GetConfigToAPI()
-	rtm := toAPI.NewRTM()
+	rtm := toAPI.NewRTM(slack.RTMOptionUseStart(false))
 	go rtm.ManageConnection()
 
 	for {

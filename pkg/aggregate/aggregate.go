@@ -28,7 +28,7 @@ func handleCatchMessagePerWorkspace(ctx context.Context, workspaceName, token st
 	loggerMap.Store(workspaceName, logger)
 
 	fromAPI := slack.New(token)
-	rtm := fromAPI.NewRTM()
+	rtm := fromAPI.NewRTM(slack.RTMOptionUseStart(false))
 	go rtm.ManageConnection()
 	for msg := range rtm.IncomingEvents {
 		switch ev := msg.Data.(type) {
