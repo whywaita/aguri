@@ -114,11 +114,14 @@ func PostMessageToChannel(ctx context.Context, toAPI, fromAPI *slack.Client, ev 
 		IconURL: icon,
 	}
 	username := user + "@" + strings.ToLower(fType[:1]) + ":" + position
+	if ev.ThreadTimestamp != "" {
+		username += " (in Thread)"
+	}
 	param.Username = username
 
 	attachments := ev.Attachments
 
-	// convert user id to user name in message
+	// convert user id to username in message
 	msg, err = ConvertIDToNameInMsg(ctx, msg, ev, fromAPI)
 	if err != nil {
 		return fmt.Errorf("failed to convert id to name: %w", err)
@@ -126,14 +129,14 @@ func PostMessageToChannel(ctx context.Context, toAPI, fromAPI *slack.Client, ev 
 
 	workspace := strings.TrimPrefix(aggrChannelName, config.PrefixSlackChannel)
 	if msg != "" {
-		respChannel, respTimestamp, err := toAPI.PostMessageContext(ctx, aggrChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
+		respChannel, respTimestamp, err := toAPI.PostMessageContext(ctx, aggrChannelName, slack.MsgOptionText(msg, true), slack.MsgOptionPostMessageParameters(param))
 		if err != nil {
 			return fmt.Errorf("failed to post message: %w", err)
 		}
 		store.SetSlackLog(workspace, ev.Timestamp, position, msg, respChannel, respTimestamp)
 	}
 	// if msg is blank, maybe bot_message (for example, twitter integration).
-	// so, must post blank msg if this post have attachments.
+	// so, must post blank msg if this post has attachments.
 	if attachments != nil {
 		for _, attachment := range attachments {
 			respChannel, respTimestamp, err := toAPI.PostMessageContext(ctx, aggrChannelName, slack.MsgOptionPostMessageParameters(param), slack.MsgOptionAttachments(attachment))
