@@ -116,21 +116,14 @@ func PostMessageToChannelUploadedFile(ctx context.Context, toAPI, fromAPI *slack
 	isThread := newestSharedFileInfo.ThreadTs != ""
 	aggredUsername := getAggredUsername(username, fromType, conversationName, isThread)
 
-	attachments := []slack.Attachment{
-		{
-			// todo: Permalink will not unfurl, fix me
-			Text: uploadedFile.Permalink,
-		},
-	}
-
 	return PostMessageToChannel(ctx,
 		toAPI,
 		iconURL,
 		aggredUsername,
-		attachments,
+		nil,
 		conversationName,
 		ev.EventTimestamp,
-		"",
+		uploadedFile.Permalink, // todo: Permalink will not unfurl, fix me (I tried msg and attachment, but not unfurl)
 		aggrConversationName,
 	)
 }

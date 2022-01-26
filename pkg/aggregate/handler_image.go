@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/whywaita/aguri/pkg/config"
 	"github.com/whywaita/aguri/pkg/utils"
@@ -29,19 +31,9 @@ func handleFileSharedEvent(ctx context.Context, ev *slack.FileSharedEvent, fromA
 		return ev.EventTimestamp
 	}
 
-	param := slack.FileUploadParameters{
-		Reader:         bytes.NewBuffer(fileByte),
-		Filetype:       f.Filetype,
-		Filename:       f.Name,
-		Title:          f.Title,
-		InitialComment: f.InitialComment.Comment,
-		// Channels will share channels, but it can't configure some parameter (e.g. username),
-		// So `files.upload` is not configure Channel and after share post it.
-		//Channels:       []string{config.GetToChannelName(workspace)},
-	}
-	uploadedFile, err := store.GetConfigToAPI().UploadFileContext(ctx, param)
+	uploadedFile, err := uploadFileWithRetry(ctx, fileByte, f, logger)
 	if err != nil {
-		logger.Warnf("failed to upload file: %+v", err)
+		logger.Warnf("failed to upload file with retry: %+v", err)
 		return ev.EventTimestamp
 	}
 
@@ -51,6 +43,37 @@ func handleFileSharedEvent(ctx context.Context, ev *slack.FileSharedEvent, fromA
 	}
 
 	return ev.EventTimestamp
+}
+
+func uploadFileWithRetry(ctx context.Context, input []byte, originalFile *slack.File, logger *logrus.Logger) (*slack.File, error) {
+	param := slack.FileUploadParameters{
+		Reader:         bytes.NewBuffer(input),
+		Filetype:       originalFile.Filetype,
+		Filename:       originalFile.Name,
+		Title:          originalFile.Title,
+		InitialComment: originalFile.InitialComment.Comment,
+		// Channels will share channels, but it can't configure some parameter (e.g. username),
+		// So `files.upload` is not configure Channel and after share post it.
+		//Channels:       []string{config.GetToChannelName(workspace)},
+	}
+
+	for i := 0; i < 3; i++ {
+		uploadedFile, err := store.GetConfigToAPI().UploadFileContext(ctx, param)
+		if err == nil {
+			return uploadedFile, nil
+		}
+
+		if strings.Contains(err.Error(), "408 Request Timeout") {
+			// retryable
+			logger.Infof("found upload file is 408 timeout, retry...")
+			time.Sleep(1 * time.Second)
+			break
+		}
+		return nil, fmt.Errorf("failed to upload file: %w", err)
+
+	}
+
+	return nil, fmt.Errorf("failed to upload file 3 times")
 }
 
 func downloadFile(ctx context.Context, privateDownloadURL string, workspace string) ([]byte, error) {
