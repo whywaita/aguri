@@ -48,7 +48,7 @@ func HandleMessageEvent(ctx context.Context, ev *slack.MessageEvent, fromAPI *sl
 				logger.Warn(err)
 			}
 		default:
-			err = utils.PostMessageToChannel(ctx, store.GetConfigToAPI(), fromAPI, ev, ev.Text, toChannelName)
+			err = utils.PostMessageToChannelMessageEvent(ctx, store.GetConfigToAPI(), fromAPI, ev, ev.Text, toChannelName)
 			if err != nil {
 				logger.Warn(err)
 			}
@@ -68,7 +68,7 @@ func handleMessageDeleted(ctx context.Context, ev *slack.MessageEvent, fromAPI *
 
 	msg := fmt.Sprintf("Original Text:\n%v", d.Body)
 
-	err = utils.PostMessageToChannel(ctx, store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
+	err = utils.PostMessageToChannelMessageEvent(ctx, store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
 	if err != nil {
 		return fmt.Errorf("failed to post message: %w", err)
 	}
@@ -85,7 +85,7 @@ func handleMessageEdited(ctx context.Context, ev *slack.MessageEvent, fromAPI *s
 	msg := fmt.Sprintf("Edited From:\n%v", d.Body)
 	msg += "\n\nEdited To:\n" + ev.SubMessage.Text
 
-	err = utils.PostMessageToChannel(ctx, store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
+	err = utils.PostMessageToChannelMessageEvent(ctx, store.GetConfigToAPI(), fromAPI, ev, msg, toChannelName)
 	if err != nil {
 		return fmt.Errorf("failed to post message: %w", err)
 	}

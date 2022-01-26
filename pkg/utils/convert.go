@@ -88,46 +88,49 @@ func ConvertDisplayPrivateChannel(ctx context.Context, api *slack.Client, channe
 	return "", fmt.Errorf("channel not found")
 }
 
-// ConvertDisplayChannelName retrieve channel type and name
-func ConvertDisplayChannelName(ctx context.Context, api *slack.Client, ev *slack.MessageEvent) (fromType, name string, err error) {
-	// identify channel or group (as known as private channel) or DM
+// ConvertDisplayChannelNameMessageEvent retrieve channel type and name from message event
+func ConvertDisplayChannelNameMessageEvent(ctx context.Context, api *slack.Client, ev *slack.MessageEvent) (fromType slackutilsx.ChannelType, name string, err error) {
+	return ConvertDisplayChannelName(ctx, api, ev.Msg.Channel, ev.Msg.User, ev.Msg.SubType)
+}
 
-	channelType := slackutilsx.DetectChannelType(ev.Channel)
-	fromType = channelType.String()
+// ConvertDisplayChannelName retrieve channel type and name
+func ConvertDisplayChannelName(ctx context.Context, api *slack.Client, channelID, userID, subtype string) (fromType slackutilsx.ChannelType, name string, err error) {
+	// identify channel or group (as known as private channel) or DM
+	channelType := slackutilsx.DetectChannelType(channelID)
 	switch channelType {
 	case slackutilsx.CTypeChannel:
-		info, err := api.GetConversationInfoContext(ctx, ev.Channel, false)
+		info, err := api.GetConversationInfoContext(ctx, channelID, false)
 		if err != nil {
 			if err.Error() == ErrMethodNotSupportedForChannelType {
 				// This error occurred by the private channels only converted from the public channel.
 				// So, this is private channel if this error.
-				name, err := ConvertDisplayPrivateChannel(ctx, api, ev.Channel)
+				name, err := ConvertDisplayPrivateChannel(ctx, api, channelID)
 				if err != nil {
-					return "", "", err
+					return slackutilsx.CTypeUnknown, "", err
 				}
 
 				return fromType, name, nil
 			}
-			return "", "", err
+			return slackutilsx.CTypeUnknown, "", err
 		}
 
 		return fromType, info.Name, nil
 
 	case slackutilsx.CTypeGroup:
-		info, err := api.GetConversationInfoContext(ctx, ev.Channel, false)
+		info, err := api.GetConversationInfoContext(ctx, channelID, false)
 		if err != nil {
-			return "", "", err
+			return slackutilsx.CTypeUnknown, "", err
 		}
 
 		return fromType, info.Name, nil
 
 	case slackutilsx.CTypeDM:
-		if ev.Msg.SubType != "" {
+		if subtype != "" {
 			// SubType is not define user
 		} else {
-			info, err := api.GetUserInfoContext(ctx, ev.Msg.User)
+			info, err := api.GetUserInfoContext(ctx, userID)
 			if err != nil {
-				return "", "", err
+				return slackutilsx.CTypeUnknown, "", err
 			}
 
 			return fromType, info.Name, nil
@@ -136,45 +139,53 @@ func ConvertDisplayChannelName(ctx context.Context, api *slack.Client, ev *slack
 		name = ""
 	}
 
-	return "", "", fmt.Errorf("channel not found")
+	return slackutilsx.CTypeUnknown, "", fmt.Errorf("channel not found")
 }
 
-// ConvertDisplayUserName retrieve user type and name
-func ConvertDisplayUserName(ctx context.Context, api *slack.Client, ev *slack.MessageEvent, id string) (username, usertype string, err error) {
-	// user id to display name
+// GetUserNameTypeIconMessageEvent get user info from *slack.MessageEvent
+func GetUserNameTypeIconMessageEvent(ctx context.Context, api *slack.Client, ev *slack.MessageEvent) (username, usertype, icon string, err error) {
+	return GetUserNameTypeIcon(ctx, api, ev.Msg.BotID, ev.Msg.User, ev.SubType)
+}
 
-	if id != "" {
+func getUserNameTypeIconFileSharedEvent(ctx context.Context, api *slack.Client, userID string) (username, usertype, icon string, err error) {
+	return GetUserNameTypeIcon(ctx, api, "", userID, "")
+}
+
+// GetUserNameTypeIcon retrieve user type and name
+func GetUserNameTypeIcon(ctx context.Context, api *slack.Client, botID, userID, subtype string) (username, usertype, icon string, err error) {
+	// user id to display name
+	if userID != "" {
 		// specific id (maybe user)
-		info, err := api.GetUserInfoContext(ctx, id)
+		info, err := api.GetUserInfoContext(ctx, userID)
 		if err != nil {
-			return "", "", fmt.Errorf("failed to get user info (user: %s): %w", id, err)
+			return "", "", "", fmt.Errorf("failed to get user info (user: %s): %w", userID, err)
 		}
 
-		return info.Name, "user", nil
+		return info.Name, "user", info.Profile.Image192, nil
 	}
 
 	// return self id
-	if ev.Msg.BotID == "B01" {
+	if botID == "B01" {
 		// this is slackbot
-		return "Slack bot", "bot", nil
-	} else if ev.Msg.BotID != "" {
+		return "Slack bot", "bot", "", nil
+	} else if botID != "" {
 		// this is bot
-		byInfo, err := api.GetBotInfoContext(ctx, ev.Msg.BotID)
+		byInfo, err := api.GetBotInfoContext(ctx, botID)
 		if err != nil {
-			return "", "", fmt.Errorf("failed to get bot info (bot: %s): %w", ev.Msg.BotID, err)
+			return "", "", "", fmt.Errorf("failed to get bot info (bot: %s): %w", botID, err)
 		}
 
-		return byInfo.Name, "bot", nil
-	} else if ev.Msg.SubType != "" {
+		return byInfo.Name, "bot", "", nil
+	} else if subtype != "" {
 		// SubType is not define user
-		return ev.Msg.SubType, "status", nil
+		return subtype, "status", "", nil
 	} else {
 		// user
-		byInfo, err := api.GetUserInfoContext(ctx, ev.Msg.User)
+		byInfo, err := api.GetUserInfoContext(ctx, userID)
 		if err != nil {
-			return "", "", fmt.Errorf("failed to get user info (user: %s): %w", ev.Msg.User, err)
+			return "", "", "", fmt.Errorf("failed to get user info (user: %s): %w", userID, err)
 		}
 
-		return byInfo.Name, "user", nil
+		return byInfo.Name, "user", byInfo.Profile.Image192, nil
 	}
 }

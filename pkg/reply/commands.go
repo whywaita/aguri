@@ -189,7 +189,7 @@ func commandGetHistory(ctx context.Context, workspace, channel string, limit int
 		m := resp.Messages[len(resp.Messages)-i]
 
 		if m.User != "" {
-			username, _, err := utils.ConvertDisplayUserName(ctx, fromAPI, nil, m.User) // set user id, do not use ev
+			username, _, _, err := utils.GetUserNameTypeIconMessageEvent(ctx, fromAPI, nil) // set user id, do not use ev
 			if err != nil {
 				return fmt.Errorf("failed to get history: %w", err)
 			}

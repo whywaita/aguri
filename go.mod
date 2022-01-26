@@ -18,3 +18,5 @@ require (
 	github.com/pkg/errors v0.8.1 // indirect
 	golang.org/x/sys v0.0.0-20191026070338-33540a1f6037 // indirect
 )
+
+replace github.com/slack-go/slack => github.com/whywaita/slack v0.4.1-0.20220126175313-dfe6bdcda3ee
