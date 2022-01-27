@@ -89,12 +89,12 @@ func ConvertDisplayPrivateChannel(ctx context.Context, api *slack.Client, channe
 }
 
 // ConvertDisplayChannelNameMessageEvent retrieve channel type and name from message event
-func ConvertDisplayChannelNameMessageEvent(ctx context.Context, api *slack.Client, ev *slack.MessageEvent) (fromType slackutilsx.ChannelType, name string, err error) {
+func ConvertDisplayChannelNameMessageEvent(ctx context.Context, api *slack.Client, ev *slack.MessageEvent) (slackutilsx.ChannelType, string, error) {
 	return ConvertDisplayChannelName(ctx, api, ev.Msg.Channel, ev.Msg.User, ev.Msg.SubType)
 }
 
 // ConvertDisplayChannelName retrieve channel type and name
-func ConvertDisplayChannelName(ctx context.Context, api *slack.Client, channelID, userID, subtype string) (fromType slackutilsx.ChannelType, name string, err error) {
+func ConvertDisplayChannelName(ctx context.Context, api *slack.Client, channelID, userID, subtype string) (slackutilsx.ChannelType, string, error) {
 	// identify channel or group (as known as private channel) or DM
 	channelType := slackutilsx.DetectChannelType(channelID)
 	switch channelType {
@@ -109,12 +109,12 @@ func ConvertDisplayChannelName(ctx context.Context, api *slack.Client, channelID
 					return slackutilsx.CTypeUnknown, "", err
 				}
 
-				return fromType, name, nil
+				return slackutilsx.CTypeGroup, name, nil
 			}
 			return slackutilsx.CTypeUnknown, "", err
 		}
 
-		return fromType, info.Name, nil
+		return channelType, info.Name, nil
 
 	case slackutilsx.CTypeGroup:
 		info, err := api.GetConversationInfoContext(ctx, channelID, false)
@@ -122,7 +122,7 @@ func ConvertDisplayChannelName(ctx context.Context, api *slack.Client, channelID
 			return slackutilsx.CTypeUnknown, "", err
 		}
 
-		return fromType, info.Name, nil
+		return channelType, info.Name, nil
 
 	case slackutilsx.CTypeDM:
 		if subtype != "" {
@@ -133,26 +133,24 @@ func ConvertDisplayChannelName(ctx context.Context, api *slack.Client, channelID
 				return slackutilsx.CTypeUnknown, "", err
 			}
 
-			return fromType, info.Name, nil
+			return channelType, info.Name, nil
 		}
-	default:
-		name = ""
 	}
 
 	return slackutilsx.CTypeUnknown, "", fmt.Errorf("channel not found")
 }
 
 // GetUserNameTypeIconMessageEvent get user info from *slack.MessageEvent
-func GetUserNameTypeIconMessageEvent(ctx context.Context, api *slack.Client, ev *slack.MessageEvent) (username, usertype, icon string, err error) {
+func GetUserNameTypeIconMessageEvent(ctx context.Context, api *slack.Client, ev *slack.MessageEvent) (string, string, string, error) {
 	return GetUserNameTypeIcon(ctx, api, ev.Msg.BotID, ev.Msg.User, ev.SubType)
 }
 
-func getUserNameTypeIconFileSharedEvent(ctx context.Context, api *slack.Client, userID string) (username, usertype, icon string, err error) {
+func getUserNameTypeIconFileSharedEvent(ctx context.Context, api *slack.Client, userID string) (string, string, string, error) {
 	return GetUserNameTypeIcon(ctx, api, "", userID, "")
 }
 
 // GetUserNameTypeIcon retrieve user type and name
-func GetUserNameTypeIcon(ctx context.Context, api *slack.Client, botID, userID, subtype string) (username, usertype, icon string, err error) {
+func GetUserNameTypeIcon(ctx context.Context, api *slack.Client, botID, userID, subtype string) (string, string, string, error) {
 	// user id to display name
 	if userID != "" {
 		// specific id (maybe user)
