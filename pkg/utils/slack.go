@@ -185,9 +185,8 @@ func PostMessageToChannel(
 	}
 
 	param := slack.PostMessageParameters{
-		IconURL:     iconURL,
-		Username:    aggredUsername,
-		UnfurlMedia: true,
+		IconURL:  iconURL,
+		Username: aggredUsername,
 	}
 
 	workspace := strings.TrimPrefix(aggrConversationName, config.PrefixSlackChannel)

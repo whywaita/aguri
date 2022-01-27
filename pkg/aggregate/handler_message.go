@@ -18,9 +18,7 @@ var (
 
 // HandleMessageEvent handle message event
 func HandleMessageEvent(ctx context.Context, ev *slack.MessageEvent, fromAPI *slack.Client, workspace, lastTimestamp string, logger *logrus.Logger) string {
-	var err error
-
-	if lastTimestamp != ev.Timestamp {
+	if lastTimestamp != ev.Timestamp || ev.PreviousMessage != nil {
 		// if lastTimestamp == ev.Timestamp, that message is same.
 		toChannelName := config.GetToChannelName(workspace)
 
@@ -28,29 +26,26 @@ func HandleMessageEvent(ctx context.Context, ev *slack.MessageEvent, fromAPI *sl
 		case "message_changed":
 			switch {
 			case len(ev.SubMessage.Attachments) == 0:
-				err = handleMessageEdited(ctx, ev, fromAPI, workspace, toChannelName)
-				if err != nil {
-					logger.Warn(err)
+				if err := handleMessageEdited(ctx, ev, fromAPI, workspace, toChannelName); err != nil {
+					logger.Warnf("failed to handle message_edited: %+v", err)
 					break
 				}
 
 			case len(ev.SubMessage.Attachments) >= 1:
 				// message_changed and Text is null = URL link expand
-				if err = handleMessageLinkExpand(ctx, ev, fromAPI, workspace, logger); err != nil && err != ErrAttachmentNotFound {
-					logger.Warn(err)
+				if err := handleMessageLinkExpand(ctx, ev, fromAPI, workspace, logger); err != nil && err != ErrAttachmentNotFound {
+					logger.Warnf("failed to handle message link expand: %+v", err)
 					break
 				}
 			}
 
 		case "message_deleted":
-			err = handleMessageDeleted(ctx, ev, fromAPI, workspace, toChannelName)
-			if err != nil {
-				logger.Warn(err)
+			if err := handleMessageDeleted(ctx, ev, fromAPI, workspace, toChannelName); err != nil {
+				logger.Warnf("failed to handle message_deleted: %+v", err)
 			}
 		default:
-			err = utils.PostMessageToChannelMessageEvent(ctx, store.GetConfigToAPI(), fromAPI, ev, ev.Text, toChannelName)
-			if err != nil {
-				logger.Warn(err)
+			if err := utils.PostMessageToChannelMessageEvent(ctx, store.GetConfigToAPI(), fromAPI, ev, ev.Text, toChannelName); err != nil {
+				logger.Warnf("failed to post to message: %+v", err)
 			}
 		}
 
