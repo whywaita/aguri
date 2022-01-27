@@ -195,7 +195,7 @@ func PostMessageToChannel(
 		respChannel, respTimestamp, err := toAPI.PostMessageContext(
 			ctx,
 			aggrConversationName,
-			slack.MsgOptionText(msg, true),
+			slack.MsgOptionText(msg, false),
 			slack.MsgOptionPostMessageParameters(param),
 		)
 		if err != nil {
