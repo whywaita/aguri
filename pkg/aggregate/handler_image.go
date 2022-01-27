@@ -47,7 +47,6 @@ func handleFileSharedEvent(ctx context.Context, ev *slack.FileSharedEvent, fromA
 
 func uploadFileWithRetry(ctx context.Context, input []byte, originalFile *slack.File, logger *logrus.Logger) (*slack.File, error) {
 	param := slack.FileUploadParameters{
-		Reader:         bytes.NewBuffer(input),
 		Filetype:       originalFile.Filetype,
 		Filename:       originalFile.Name,
 		Title:          originalFile.Title,
@@ -58,6 +57,7 @@ func uploadFileWithRetry(ctx context.Context, input []byte, originalFile *slack.
 	}
 
 	for i := 0; i < 3; i++ {
+		param.Reader = bytes.NewBuffer(input)
 		uploadedFile, err := store.GetConfigToAPI().UploadFileContext(ctx, param)
 		if err == nil {
 			return uploadedFile, nil
@@ -67,10 +67,9 @@ func uploadFileWithRetry(ctx context.Context, input []byte, originalFile *slack.
 			// retryable
 			logger.Infof("found upload file is 408 timeout, retry...")
 			time.Sleep(1 * time.Second)
-			break
+			continue
 		}
 		return nil, fmt.Errorf("failed to upload file: %w", err)
-
 	}
 
 	return nil, fmt.Errorf("failed to upload file 3 times")
