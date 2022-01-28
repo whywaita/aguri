@@ -128,24 +128,58 @@ func PostMessageToChannelUploadedFile(ctx context.Context, toAPI, fromAPI *slack
 	)
 }
 
+// IsJoined check joined channelID in joinedChannels
+func IsJoined(channelID string, joinedChannels []slack.Channel) bool {
+	for _, ch := range joinedChannels {
+		if strings.EqualFold(ch.ID, channelID) {
+			return true
+		}
+	}
+	return false
+}
+
+// isSharedFile check f is shared in sharedChannelID
 func isSharedFile(f *slack.File, sharedChannelID string) []slack.ShareFileInfo {
+	var result []slack.ShareFileInfo
+
 	infoPublic, ok := f.Shares.Public[sharedChannelID]
 	if ok {
-		sort.SliceStable(infoPublic, func(i, j int) bool {
-			return infoPublic[i].Ts > infoPublic[j].Ts
-		})
-		return infoPublic
+		result = infoPublic
 	}
 
 	infoPrivate, ok := f.Shares.Private[sharedChannelID]
 	if ok {
-		sort.SliceStable(infoPrivate, func(i, j int) bool {
-			return infoPrivate[i].Ts > infoPrivate[j].Ts
-		})
-		return infoPrivate
+		result = append(result, infoPrivate...)
 	}
 
-	return nil
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].Ts > result[j].Ts
+	})
+	return result
+}
+
+func mergeMap(i, j map[string][]slack.ShareFileInfo) map[string][]slack.ShareFileInfo {
+	m := make(map[string][]slack.ShareFileInfo)
+
+	for k, v := range i {
+		val, ok := m[k]
+		if ok {
+			m[k] = append(val, v...)
+		} else {
+			m[k] = v
+		}
+	}
+
+	for k, v := range j {
+		val, ok := m[k]
+		if ok {
+			m[k] = append(val, v...)
+		} else {
+			m[k] = v
+		}
+	}
+
+	return m
 }
 
 func getPostParam(ctx context.Context, fromAPI *slack.Client, originalUserID, originalChannelID string) (string, string, slackutilsx.ChannelType, string, error) {

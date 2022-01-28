@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/slack-go/slack/slackutilsx"
+
 	"github.com/whywaita/aguri/pkg/config"
 	"github.com/whywaita/aguri/pkg/utils"
 
@@ -22,6 +24,18 @@ func handleFileSharedEvent(ctx context.Context, ev *slack.FileSharedEvent, fromA
 	f, _, _, err := fromAPI.GetFileInfoContext(ctx, ev.File.ID, 100, 0)
 	if err != nil {
 		logger.Warn(err)
+		return ev.EventTimestamp
+	}
+
+	joinedChannels, err := utils.GetConversationsList(ctx, fromAPI, []slackutilsx.ChannelType{
+		slackutilsx.CTypeChannel, slackutilsx.CTypeGroup, slackutilsx.CTypeDM,
+	})
+	if err != nil {
+		logger.Warn(err)
+		return ev.EventTimestamp
+	}
+	if joined := utils.IsJoined(ev.ChannelID, joinedChannels); !joined {
+		// not upload if not joined channel
 		return ev.EventTimestamp
 	}
 
