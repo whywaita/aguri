@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/slack-go/slack"
@@ -52,51 +53,154 @@ func GetMessageByTS(ctx context.Context, api *slack.Client, channel, timestamp s
 	return &msg, nil
 }
 
-// ConvertIDToNameInMsg convert channel name in msg
-func ConvertIDToNameInMsg(ctx context.Context, msg string, ev *slack.MessageEvent, fromAPI *slack.Client) (string, error) {
-	userIds := reUser.FindAllStringSubmatch(ev.Text, -1)
-	if len(userIds) != 0 {
-		for _, ids := range userIds {
-			id := strings.TrimPrefix(ids[0], "<@")
-			id = strings.TrimSuffix(id, ">")
-			name, _, err := ConvertDisplayUserName(ctx, fromAPI, ev, id)
-			if err != nil {
-				return "", err
-			}
-			msg = strings.Replace(msg, id, name, -1)
-		}
-	}
-
-	return msg, nil
+func getInitial(conversationType slackutilsx.ChannelType) string {
+	str := conversationType.String()
+	return strings.ToLower(str[:1])
 }
 
-// GetUserInfo get info of user
-func GetUserInfo(ctx context.Context, fromAPI *slack.Client, ev *slack.MessageEvent) (username, icon string, err error) {
-	// get source username and channel, im, group
-	user, usertype, err := ConvertDisplayUserName(ctx, fromAPI, ev, "")
+func getAggredUsername(username string, conversationType slackutilsx.ChannelType, conversationName string, isThead bool) string {
+	aggredUsername := username + "@" + getInitial(conversationType) + ":" + conversationName
+	if isThead {
+		aggredUsername += " (in Thread)"
+	}
+	return aggredUsername
+}
+
+func getPostParamMessageEvent(ctx context.Context, fromAPI *slack.Client, ev *slack.MessageEvent) (string, string, slackutilsx.ChannelType, string, error) {
+	username, _, iconURL, err := GetUserNameTypeIconMessageEvent(ctx, fromAPI, ev)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to convert display name: %w", err)
+		return "", "", slackutilsx.CTypeUnknown, "", fmt.Errorf("failed to get user info: %w", err)
+	}
+	fromType, conversationName, err := ConvertDisplayChannelNameMessageEvent(ctx, fromAPI, ev)
+	if err != nil {
+		return "", "", slackutilsx.CTypeUnknown, "", fmt.Errorf("failed to convert channel name: %w", err)
 	}
 
-	if usertype == "user" {
-		u, err := fromAPI.GetUserInfo(ev.Msg.User)
-		if err != nil {
-			return "", "", fmt.Errorf("failed to get user info: %w", err)
-		}
-		icon = u.Profile.Image192
-	} else {
-		icon = ""
-	}
-
-	return user, icon, nil
+	return username, iconURL, fromType, conversationName, nil
 }
 
-// PostMessageToChannel port message to aggrChannelName
-func PostMessageToChannel(ctx context.Context, toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, msg, aggrChannelName string) error {
+// PostMessageToChannelMessageEvent port message to aggrConversationName from slack.MessageEvent
+func PostMessageToChannelMessageEvent(ctx context.Context, toAPI, fromAPI *slack.Client, ev *slack.MessageEvent, msg, aggrConversationName string) error {
+	username, iconURL, fromType, conversationName, err := getPostParamMessageEvent(ctx, fromAPI, ev)
+	if err != nil {
+		return fmt.Errorf("failed to get param: %w", err)
+	}
+
+	isThread := ev.Msg.ThreadTimestamp != ""
+	aggredUsername := getAggredUsername(username, fromType, conversationName, isThread)
+
+	return PostMessageToChannel(ctx,
+		toAPI,
+		iconURL,
+		aggredUsername,
+		ev.Attachments,
+		conversationName,
+		ev.Timestamp,
+		msg,
+		aggrConversationName,
+	)
+}
+
+// PostMessageToChannelUploadedFile port file link to aggrConversationName from slack.FileSharedEvent
+func PostMessageToChannelUploadedFile(ctx context.Context, toAPI, fromAPI *slack.Client, ev *slack.FileSharedEvent, originalFile, uploadedFile *slack.File, aggrConversationName string) error {
+	username, iconURL, fromType, conversationName, err := getPostParam(ctx, fromAPI, originalFile.User, ev.ChannelID)
+	if err != nil {
+		return fmt.Errorf("failed to get param: %w", err)
+	}
+
+	sharedFileInfo := isSharedFile(originalFile, ev.ChannelID)
+	if sharedFileInfo == nil {
+		return fmt.Errorf("failed to get shared info from file: %w", err)
+	}
+	newestSharedFileInfo := sharedFileInfo[0]
+	isThread := newestSharedFileInfo.ThreadTs != ""
+	aggredUsername := getAggredUsername(username, fromType, conversationName, isThread)
+
+	return PostMessageToChannel(ctx,
+		toAPI,
+		iconURL,
+		aggredUsername,
+		nil,
+		conversationName,
+		ev.EventTimestamp,
+		uploadedFile.Permalink, // todo: Permalink will not unfurl, fix me (I tried msg and attachment, but not unfurl)
+		aggrConversationName,
+	)
+}
+
+// isSharedFile check f is shared in sharedChannelID
+func isSharedFile(f *slack.File, sharedChannelID string) []slack.ShareFileInfo {
+	var result []slack.ShareFileInfo
+
+	infoPublic, ok := f.Shares.Public[sharedChannelID]
+	if ok {
+		result = infoPublic
+	}
+
+	infoPrivate, ok := f.Shares.Private[sharedChannelID]
+	if ok {
+		result = append(result, infoPrivate...)
+	}
+
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].Ts > result[j].Ts
+	})
+	return result
+}
+
+func mergeMap(i, j map[string][]slack.ShareFileInfo) map[string][]slack.ShareFileInfo {
+	m := make(map[string][]slack.ShareFileInfo)
+
+	for k, v := range i {
+		val, ok := m[k]
+		if ok {
+			m[k] = append(val, v...)
+		} else {
+			m[k] = v
+		}
+	}
+
+	for k, v := range j {
+		val, ok := m[k]
+		if ok {
+			m[k] = append(val, v...)
+		} else {
+			m[k] = v
+		}
+	}
+
+	return m
+}
+
+func getPostParam(ctx context.Context, fromAPI *slack.Client, originalUserID, originalChannelID string) (string, string, slackutilsx.ChannelType, string, error) {
+	username, _, iconURL, err := getUserNameTypeIconFileSharedEvent(ctx, fromAPI, originalUserID)
+	if err != nil {
+		return "", "", slackutilsx.CTypeUnknown, "", fmt.Errorf("failed to get user info: %w", err)
+	}
+
+	fromType, conversationName, err := ConvertDisplayChannelName(ctx, fromAPI, originalChannelID, originalUserID, "")
+	if err != nil {
+		return "", "", slackutilsx.CTypeUnknown, "", fmt.Errorf("failed to convert channel name: %w", err)
+	}
+
+	return username, iconURL, fromType, conversationName, nil
+}
+
+// PostMessageToChannel port message to aggrConversationName
+func PostMessageToChannel(
+	ctx context.Context,
+	toAPI *slack.Client,
+	iconURL string,
+	aggredUsername string,
+	attachments []slack.Attachment,
+	fromConversationName string,
+	fromTimestamp string,
+	msg, aggrConversationName string,
+) error {
 	// post aggregate message
 	var err error
 
-	isExist, _, err := IsExistChannel(ctx, toAPI, aggrChannelName)
+	isExist, _, err := IsExistChannel(ctx, toAPI, aggrConversationName)
 	if isExist == false {
 		return fmt.Errorf("channel is not found: %w", err)
 	}
@@ -104,43 +208,38 @@ func PostMessageToChannel(ctx context.Context, toAPI, fromAPI *slack.Client, ev 
 		return fmt.Errorf("failed to get info of exist channel: %w", err)
 	}
 
-	user, icon, err := GetUserInfo(ctx, fromAPI, ev)
-	fType, position, err := ConvertDisplayChannelName(ctx, fromAPI, ev)
-	if err != nil {
-		return fmt.Errorf("failed to convert channel name: %w", err)
-	}
-
 	param := slack.PostMessageParameters{
-		IconURL: icon,
-	}
-	username := user + "@" + strings.ToLower(fType[:1]) + ":" + position
-	param.Username = username
-
-	attachments := ev.Attachments
-
-	// convert user id to user name in message
-	msg, err = ConvertIDToNameInMsg(ctx, msg, ev, fromAPI)
-	if err != nil {
-		return fmt.Errorf("failed to convert id to name: %w", err)
+		IconURL:  iconURL,
+		Username: aggredUsername,
 	}
 
-	workspace := strings.TrimPrefix(aggrChannelName, config.PrefixSlackChannel)
+	workspace := strings.TrimPrefix(aggrConversationName, config.PrefixSlackChannel)
 	if msg != "" {
-		respChannel, respTimestamp, err := toAPI.PostMessageContext(ctx, aggrChannelName, slack.MsgOptionText(msg, false), slack.MsgOptionPostMessageParameters(param))
+		respChannel, respTimestamp, err := toAPI.PostMessageContext(
+			ctx,
+			aggrConversationName,
+			slack.MsgOptionText(msg, false),
+			slack.MsgOptionPostMessageParameters(param),
+		)
 		if err != nil {
 			return fmt.Errorf("failed to post message: %w", err)
 		}
-		store.SetSlackLog(workspace, ev.Timestamp, position, msg, respChannel, respTimestamp)
+		store.SetSlackLog(workspace, fromTimestamp, fromConversationName, msg, respChannel, respTimestamp)
 	}
 	// if msg is blank, maybe bot_message (for example, twitter integration).
-	// so, must post blank msg if this post have attachments.
+	// so, must post blank msg if this post has attachments.
 	if attachments != nil {
 		for _, attachment := range attachments {
-			respChannel, respTimestamp, err := toAPI.PostMessageContext(ctx, aggrChannelName, slack.MsgOptionPostMessageParameters(param), slack.MsgOptionAttachments(attachment))
+			respChannel, respTimestamp, err := toAPI.PostMessageContext(
+				ctx,
+				aggrConversationName,
+				slack.MsgOptionPostMessageParameters(param),
+				slack.MsgOptionAttachments(attachment),
+			)
 			if err != nil {
 				return fmt.Errorf("failed to post message: %w", err)
 			}
-			store.SetSlackLog(workspace, ev.Timestamp, position, msg, respChannel, respTimestamp)
+			store.SetSlackLog(workspace, fromTimestamp, fromConversationName, msg, respChannel, respTimestamp)
 		}
 	}
 

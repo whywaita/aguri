@@ -36,6 +36,8 @@ func handleCatchMessagePerWorkspace(ctx context.Context, workspaceName, token st
 			// info = ev.Info
 		case *slack.MessageEvent:
 			lastTimestamp = HandleMessageEvent(ctx, ev, fromAPI, workspaceName, lastTimestamp, logger)
+		case *slack.FileSharedEvent:
+			lastTimestamp = handleFileSharedEvent(ctx, ev, fromAPI, workspaceName, lastTimestamp, logger)
 		case *slack.RTMError:
 			logger.Infof("RTM Error: %s\n", ev.Error())
 		case *slack.FilePublicEvent,
