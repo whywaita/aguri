@@ -27,7 +27,7 @@ func handleFileSharedEvent(ctx context.Context, ev *slack.FileSharedEvent, fromA
 		return ev.EventTimestamp
 	}
 
-	joinedChannels, err := utils.GetConversationsList(ctx, fromAPI, []slackutilsx.ChannelType{
+	joinedChannels, err := utils.GetJoinedConversationsList(ctx, fromAPI, []slackutilsx.ChannelType{
 		slackutilsx.CTypeChannel, slackutilsx.CTypeGroup, slackutilsx.CTypeDM,
 	})
 	if err != nil {

@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackutilsx"
@@ -12,6 +13,33 @@ const (
 	// ErrMethodNotSupportedForChannelType is error message for method_not_supported_for_channel_type
 	ErrMethodNotSupportedForChannelType = "method_not_supported_for_channel_type"
 )
+
+// IsJoined check joined channelID in joinedChannels
+func IsJoined(channelID string, joinedChannels []slack.Channel) bool {
+	for _, ch := range joinedChannels {
+		if strings.EqualFold(ch.ID, channelID) {
+			return true
+		}
+	}
+	return false
+}
+
+// GetJoinedConversationsList get list of joined conversation
+func GetJoinedConversationsList(ctx context.Context, api *slack.Client, types []slackutilsx.ChannelType) ([]slack.Channel, error) {
+	conversations, err := GetConversationsList(ctx, api, types)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get list of conversations: %w", err)
+	}
+
+	var joined []slack.Channel
+	for _, conversation := range conversations {
+		if conversation.IsMember {
+			joined = append(joined, conversation)
+		}
+	}
+
+	return joined, nil
+}
 
 // GetConversationsList get list of conversation
 func GetConversationsList(ctx context.Context, api *slack.Client, types []slackutilsx.ChannelType) ([]slack.Channel, error) {

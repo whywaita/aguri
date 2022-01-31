@@ -128,16 +128,6 @@ func PostMessageToChannelUploadedFile(ctx context.Context, toAPI, fromAPI *slack
 	)
 }
 
-// IsJoined check joined channelID in joinedChannels
-func IsJoined(channelID string, joinedChannels []slack.Channel) bool {
-	for _, ch := range joinedChannels {
-		if strings.EqualFold(ch.ID, channelID) {
-			return true
-		}
-	}
-	return false
-}
-
 // isSharedFile check f is shared in sharedChannelID
 func isSharedFile(f *slack.File, sharedChannelID string) []slack.ShareFileInfo {
 	var result []slack.ShareFileInfo
