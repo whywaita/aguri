@@ -16,5 +16,5 @@ require (
 	github.com/lusis/slack-test v0.0.0-20190426140909-c40012f20018 // indirect
 	github.com/nlopes/slack v0.5.0 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
-	golang.org/x/sys v0.0.0-20191026070338-33540a1f6037 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 )
