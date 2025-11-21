@@ -156,7 +156,7 @@ func commandGetHistory(ctx context.Context, workspace, channel string, limit int
 	toAPI := store.GetConfigToAPI()
 	isExist, ch, err := utils.IsExistChannel(ctx, fromAPI, channel)
 	if isExist == false {
-		return fmt.Errorf(fmt.Sprintf("failed to get history: %s is not found", channel))
+		return fmt.Errorf("failed to get history: %s is not found", channel)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to get history: %w", err)
