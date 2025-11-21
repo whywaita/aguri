@@ -127,7 +127,9 @@ func ConvertDisplayChannelName(ctx context.Context, api *slack.Client, channelID
 	channelType := slackutilsx.DetectChannelType(channelID)
 	switch channelType {
 	case slackutilsx.CTypeChannel:
-		info, err := api.GetConversationInfoContext(ctx, channelID, false)
+		info, err := api.GetConversationInfoContext(ctx, &slack.GetConversationInfoInput{
+			ChannelID: channelID,
+		})
 		if err != nil {
 			if err.Error() == ErrMethodNotSupportedForChannelType {
 				// This error occurred by the private channels only converted from the public channel.
@@ -145,7 +147,9 @@ func ConvertDisplayChannelName(ctx context.Context, api *slack.Client, channelID
 		return channelType, info.Name, nil
 
 	case slackutilsx.CTypeGroup:
-		info, err := api.GetConversationInfoContext(ctx, channelID, false)
+		info, err := api.GetConversationInfoContext(ctx, &slack.GetConversationInfoInput{
+			ChannelID: channelID,
+		})
 		if err != nil {
 			return slackutilsx.CTypeUnknown, "", err
 		}
@@ -196,7 +200,9 @@ func GetUserNameTypeIcon(ctx context.Context, api *slack.Client, botID, userID, 
 		return "Slack bot", "bot", "", nil
 	} else if botID != "" {
 		// this is bot
-		byInfo, err := api.GetBotInfoContext(ctx, botID)
+		byInfo, err := api.GetBotInfoContext(ctx, slack.GetBotInfoParameters{
+			Bot: botID,
+		})
 		if err != nil {
 			return "", "", "", fmt.Errorf("failed to get bot info (bot: %s): %w", botID, err)
 		}

@@ -27,6 +27,13 @@ func handleFileSharedEvent(ctx context.Context, ev *slack.FileSharedEvent, fromA
 		return ev.EventTimestamp
 	}
 
+	// Get channel ID from file channels
+	if len(f.Channels) == 0 {
+		logger.Warn("no channels found in file shared event")
+		return ev.EventTimestamp
+	}
+	channelID := f.Channels[0]
+
 	joinedChannels, err := utils.GetJoinedConversationsList(ctx, fromAPI, []slackutilsx.ChannelType{
 		slackutilsx.CTypeChannel, slackutilsx.CTypeGroup, slackutilsx.CTypeDM,
 	})
@@ -34,7 +41,7 @@ func handleFileSharedEvent(ctx context.Context, ev *slack.FileSharedEvent, fromA
 		logger.Warn(err)
 		return ev.EventTimestamp
 	}
-	if joined := utils.IsJoined(ev.ChannelID, joinedChannels); !joined {
+	if joined := utils.IsJoined(channelID, joinedChannels); !joined {
 		// not upload if not joined channel
 		return ev.EventTimestamp
 	}
@@ -45,9 +52,16 @@ func handleFileSharedEvent(ctx context.Context, ev *slack.FileSharedEvent, fromA
 		return ev.EventTimestamp
 	}
 
-	uploadedFile, err := uploadFileWithRetry(ctx, fileByte, f, logger)
+	uploadedFileSummary, err := uploadFileWithRetry(ctx, fileByte, f, logger)
 	if err != nil {
 		logger.Warnf("failed to upload file with retry: %+v", err)
+		return ev.EventTimestamp
+	}
+
+	// Get full file info to obtain permalink
+	uploadedFile, _, _, err := store.GetConfigToAPI().GetFileInfoContext(ctx, uploadedFileSummary.ID, 0, 0)
+	if err != nil {
+		logger.Warnf("failed to get uploaded file info: %+v", err)
 		return ev.EventTimestamp
 	}
 
@@ -59,20 +73,20 @@ func handleFileSharedEvent(ctx context.Context, ev *slack.FileSharedEvent, fromA
 	return ev.EventTimestamp
 }
 
-func uploadFileWithRetry(ctx context.Context, input []byte, originalFile *slack.File, logger *logrus.Logger) (*slack.File, error) {
-	param := slack.FileUploadParameters{
-		Filetype:       originalFile.Filetype,
+func uploadFileWithRetry(ctx context.Context, input []byte, originalFile *slack.File, logger *logrus.Logger) (*slack.FileSummary, error) {
+	param := slack.UploadFileV2Parameters{
+		FileSize:       len(input),
 		Filename:       originalFile.Name,
 		Title:          originalFile.Title,
 		InitialComment: originalFile.InitialComment.Comment,
 		// Channels will share channels, but it can't configure some parameter (e.g. username),
 		// So `files.upload` is not configure Channel and after share post it.
-		//Channels:       []string{config.GetToChannelName(workspace)},
+		//Channel:       config.GetToChannelName(workspace),
 	}
 
 	for i := 0; i < 3; i++ {
 		param.Reader = bytes.NewBuffer(input)
-		uploadedFile, err := store.GetConfigToAPI().UploadFileContext(ctx, param)
+		uploadedFile, err := store.GetConfigToAPI().UploadFileV2Context(ctx, param)
 		if err == nil {
 			return uploadedFile, nil
 		}

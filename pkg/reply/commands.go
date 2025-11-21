@@ -142,7 +142,10 @@ func commandPost(ctx context.Context, workspace, channel, body string) error {
 }
 
 func commandCreateChannel(ctx context.Context, workspace, channelName string) error {
-	if _, err := store.GetSlackAPIInstance(workspace).CreateConversationContext(ctx, channelName, false); err != nil {
+	if _, err := store.GetSlackAPIInstance(workspace).CreateConversationContext(ctx, slack.CreateConversationParams{
+		ChannelName: channelName,
+		IsPrivate:   false,
+	}); err != nil {
 		return fmt.Errorf("failed to create conversation: %w", err)
 	}
 	return nil
@@ -199,7 +202,9 @@ func commandGetHistory(ctx context.Context, workspace, channel string, limit int
 			param.Username = utils.GenerateAguriUsername(ch, "SLACKBOT")
 		} else {
 			// bot
-			botInfo, err := fromAPI.GetBotInfoContext(ctx, m.BotID)
+			botInfo, err := fromAPI.GetBotInfoContext(ctx, slack.GetBotInfoParameters{
+				Bot: m.BotID,
+			})
 			if err != nil {
 				return fmt.Errorf("failed to get history: %w", err)
 			}
