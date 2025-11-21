@@ -18,7 +18,7 @@ var (
 	reChannel = regexp.MustCompile(`(\S+)@(\S+):(\S+)`)
 )
 
-func validateMessage(fromType, aggrChannelName string, ev *slack.MessageEvent) bool {
+func validateMessage(fromType slackutilsx.ChannelType, aggrChannelName string, ev *slack.MessageEvent) bool {
 	if !strings.Contains(aggrChannelName, config.PrefixSlackChannel) {
 		// not aggr channel
 		return false
@@ -33,7 +33,7 @@ func validateMessage(fromType, aggrChannelName string, ev *slack.MessageEvent) b
 		return false
 	}
 
-	if fromType != slackutilsx.CTypeChannel.String() && fromType != slackutilsx.CTypeGroup.String() {
+	if fromType != slackutilsx.CTypeChannel && fromType != slackutilsx.CTypeGroup {
 		// TODO: implement other type
 		return false
 	}
@@ -71,7 +71,7 @@ func HandleReplyMessage(ctx context.Context, loggerMap *store.SyncLoggerMap) err
 func handleIncomingEvents(ctx context.Context, msg slack.RTMEvent, toAPI *slack.Client, loggerMap *store.SyncLoggerMap) error {
 	switch ev := msg.Data.(type) {
 	case *slack.MessageEvent:
-		fromType, aggrChName, err := utils.ConvertDisplayChannelName(ctx, toAPI, ev)
+		fromType, aggrChName, err := utils.ConvertDisplayChannelNameMessageEvent(ctx, toAPI, ev)
 		if err != nil {
 			return fmt.Errorf("failed to convert display channel name: %w", err)
 
