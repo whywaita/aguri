@@ -103,12 +103,18 @@ func PostMessageToChannelMessageEvent(ctx context.Context, toAPI, fromAPI *slack
 
 // PostMessageToChannelUploadedFile port file link to aggrConversationName from slack.FileSharedEvent
 func PostMessageToChannelUploadedFile(ctx context.Context, toAPI, fromAPI *slack.Client, ev *slack.FileSharedEvent, originalFile, uploadedFile *slack.File, aggrConversationName string) error {
-	username, iconURL, fromType, conversationName, err := getPostParam(ctx, fromAPI, originalFile.User, ev.ChannelID)
+	// Get channel ID from file channels
+	if len(originalFile.Channels) == 0 {
+		return fmt.Errorf("no channels found in original file")
+	}
+	channelID := originalFile.Channels[0]
+
+	username, iconURL, fromType, conversationName, err := getPostParam(ctx, fromAPI, originalFile.User, channelID)
 	if err != nil {
 		return fmt.Errorf("failed to get param: %w", err)
 	}
 
-	sharedFileInfo := isSharedFile(originalFile, ev.ChannelID)
+	sharedFileInfo := isSharedFile(originalFile, channelID)
 	if sharedFileInfo == nil {
 		return fmt.Errorf("failed to get shared info from file: %w", err)
 	}
